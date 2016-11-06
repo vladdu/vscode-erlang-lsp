@@ -17,13 +17,19 @@ For example if there is an image subfolder under your extension project workspac
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+An Erlang VM 18+ must be installed and accessible on $PATH for the server to run. 
 
 ## Build
 
+### Server
+
+Use `rebar3 compile`.
+
 ### Extension
 
-### Server
+Build as usual, after having built the server. The beam files will be included.
+
+For development, run `vsce package` and install from the resulting `.vsix` file.
 
 ## Extension Settings
 
