@@ -16,7 +16,7 @@ run(Opts) ->
 	{ok, Socket} = gen_tcp:connect("localhost", Port, ?TCP_OPTIONS),
 	loop(Socket, Opts).
 
-loop(Socket, Opts) ->  
+loop(Socket, Opts) ->
 	loop(Socket, Opts, <<"">>, 0).
 
 loop(Socket, Opts, Buf, N) ->
@@ -54,30 +54,34 @@ parse(Data) ->
 
 dispatch(#{<<"jsonrpc">> := <<"2.0">>,
 		   <<"id">> := Id,
-			<<"method">> := Method0,
-			<<"params">> := Params
-		   }) ->
+		   <<"method">> := Method0,
+		   <<"params">> := Params
+		  }) ->
 	Method = binary_to_atom(Method0, unicode),
 	io:format("###  ~p ~p~n", [Method, Params]),
-	{Id, erlang_lsp_handler:Method(Params)};
+	Fun = erlang_lsp_handler:method_to_function(Method),
+	{Id, erlang_lsp_handler:Fun(Params)};
 dispatch(#{<<"jsonrpc">> := <<"2.0">>,
-			<<"method">> := Method0,
-			<<"params">> := Params
-		   }) ->
+		   <<"method">> := Method0,
+		   <<"params">> := Params
+		  }) ->
 	Method = binary_to_atom(Method0, unicode),
 	io:format("###  ~p ~p~n", [Method, Params]),
-	{-1, erlang_lsp_handler:Method(Params)}.
+	Fun = erlang_lsp_handler:method_to_function(Method),
+	{-1, erlang_lsp_handler:Fun(Params)}.
 
 answer(_Socket, -1, _Msg) when is_map(_Msg) ->
 	ok;
 answer(Socket, Id, Msg) when is_map(Msg) ->
 	io:format("REPLY ~p~n", [Msg]),
 	Ans0 = #{<<"jsonrpc">> => <<"2.0">>,
-			<<"result">> => Msg
-		   },
+			 <<"result">> => Msg
+			},
 	Ans = if Id >= 0 -> Ans0#{<<"id">>=>Id}; true -> Ans0 end,
 	Json = jsx:encode(Ans),
 	Hdr = io_lib:format("Content-Length: ~w\r\n\r\n", [size(Json)]),
-	io:format("WRITE ~s~s~n", [Hdr, Json]),
+	%% 	io:format("WRITE ~s~s~n", [Hdr, Json]),
 	gen_tcp:send(Socket, Hdr),
-	gen_tcp:send(Socket, Json).
+	gen_tcp:send(Socket, Json);
+answer(_, _, _) ->
+	ok.
