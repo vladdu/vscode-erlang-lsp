@@ -7,3 +7,16 @@ src/**
 .gitignore
 tsconfig.json
 vsc-extension-quickstart.md
+**/*.vsix
+
+server/**
+_build/**
+!_build/default/lib/*/ebin/**
+
+**/.rebar3/**
+rebar3
+rebar3.*
+rebar.config
+erl_crash.dump
+.settings/**
+rebar.lock

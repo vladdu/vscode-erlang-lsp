@@ -1,0 +1,13 @@
+{application, erlang_lsp,
+ [{description, ""},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {modules, []},
+  {applications, [
+                 kernel
+                 ,stdlib
+                 ,jsx
+                 ]},
+  {mod, {erlang_lsp_app, []}},
+  {env, []}
+ ]}.

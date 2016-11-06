@@ -1,6 +1,9 @@
 # vscode-erlang-lsp README
 
-This is the README for your extension "vscode-erlang-lsp". After writing up a brief description, we recommend including the following sections.
+This VSCode extension is interacting with an Erlang language server that provides support for the language. 
+To begin with, this is meant to be a testbed for the server and there will be few (if any) other features (like syntax highlighting or executing code). There are other extension that provide those.
+ 
+The server  will initially be part of this repository (in the `server` directory), but will later become a standalone entity (probably under the "erlide" brand).
 
 ## Features
 
@@ -15,6 +18,12 @@ For example if there is an image subfolder under your extension project workspac
 ## Requirements
 
 If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+
+## Build
+
+### Extension
+
+### Server
 
 ## Extension Settings
 
@@ -33,33 +42,4 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on OSX or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on OSX or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (OSX) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Well, no releases yet.

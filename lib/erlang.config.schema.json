@@ -1,0 +1,20 @@
+{
+    "type": "object",
+    "properties": {
+        "sourcePath": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Erlang compiler source path"
+        },
+        "codePathFile": {
+            "type": "string",
+            "description": "File containing the code path"
+        },
+        "outputDirectory": {
+            "type": "string",
+            "description": "Where to place generated .beam files"
+        }
+    }
+}
