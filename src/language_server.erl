@@ -17,8 +17,9 @@
 
 -record(state, {
 				proxy,
-				stopped=false,
-				internal=#{}
+				stopped = false,
+				internal = #{},
+				requests = []
 			   }).
 
 start([Port0]) ->
@@ -35,8 +36,10 @@ show_message(Type, Msg) ->
 
 show_message_request(Type, Msg, Actions) ->
 	?SERVER ! {show_message_request, Type, Msg, Actions, self()},
-	%% TODO wait to receive answer
-	ok.
+	receive
+		Msg ->
+			Msg
+	end.
 
 log_message(Type, Msg) ->
 	?SERVER ! {log_message, Type, Msg}.
@@ -59,7 +62,7 @@ loop(State=#state{proxy=Proxy}) ->
 		{'initialize', Id, Args} ->
 			NewState = initialize(State, Id, Args),
 			loop(NewState);
-		{'shutdown', Id, _} ->
+		{'shutdown', _Id, _} ->
 			loop(State#state{stopped=true});
 		{'exit', _} ->
 			erlang:halt();
@@ -114,15 +117,22 @@ loop(State=#state{proxy=Proxy}) ->
 
 		{show_message, Type, Msg} ->
 			Proxy ! {notify, 'window/showMessage',
-					 #{type => Type, message => iolist_to_binary(Msg)}},
+					 #{type => Type,
+					   message => iolist_to_binary(Msg)}},
 			loop(State);
-		{show_message_request, _Type, _Msg, _Actions, _Pid} ->
-			NewState = State,
-			% TODO register id & Pid
+		{show_message_request, Type, Msg, Actions, Pid} ->
+			Id = erlang:unique_integer(),
+			NewState = State#state{requests=[{Id, Pid}|State#state.requests]},
+			Proxy ! {request, Id, 'window/showMessageRequest',
+					 #{type => Type,
+					   message => iolist_to_binary(Msg),
+					   actions => Actions}
+					},
 			loop(NewState);
 		{log_message, Type, Msg} ->
 			Proxy ! {notify, 'window/logMessage',
-					 #{type => Type, message => iolist_to_binary(Msg)}},
+					 #{type => Type,
+					   message => iolist_to_binary(Msg)}},
 			loop(State);
 		{telemetry_event, Msg} ->
 			Proxy ! {notify, 'telemetry/event', Msg},
@@ -134,10 +144,13 @@ loop(State=#state{proxy=Proxy}) ->
 			loop(State);
 
 		{'$reply', Id, Msg} ->
-			% TODO get pid
-			Pid = undefined,
-			Pid ! Msg,
-			loop(State);
+			case lists:keytake(Id, 1, State#state.requests) of
+				false ->
+					loop(State);
+				{value, {Id, Pid}, Rest} ->
+					Pid ! Msg,
+					loop(State#state{requests=Rest})
+			end;
 
 		{_F, _A} ->
 			%% unknown notification, ignore
@@ -201,4 +214,3 @@ cancel_request(_Id) ->
 update_configuration(State, _Settings) ->
 	%% TODO implement
 	State.
-
