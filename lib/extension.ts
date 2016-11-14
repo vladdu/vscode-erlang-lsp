@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
             let port = 4900;
             let args = [
                 '-noshell',
-                '-s', 'erlang_lsp', 'start', port.toString()
+                '-s', 'language_server', 'start', port.toString()
             ];
 
             Net.createServer(socket => {
@@ -53,13 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
                 // Start the child java process
                 let erl = ChildProcess.execFile(erlExecutablePath, args, options);
                 erl.stdout.on('data', (data) => {
-                    console.log("stdout: " + data);
-                });
-                erl.stderr.on('data', (data) => {
-                    console.log("stderr: " + data);
-                });
-                erl.on('close', (data) => {
-                    console.log("close: " + data);
+                    console.log("$> " + data);
                 });
             });
         });
@@ -68,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Create the language client and start it.
     let client = new LanguageClient('Erlang Server', createServer, clientOptions);
     client.onReady().then(
-            () => console.log('READY'),
+            () => console.log('Server ready!'),
             (reason) => vscode.window.showErrorMessage("Could not start Erlang language service: " + reason));
     let aclient = client.start();
 
