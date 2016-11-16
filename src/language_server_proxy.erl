@@ -83,14 +83,14 @@ dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   params := Params
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### REQUEST ~p ~p~n", [Method, Params]),
+	io:format("### REQUEST ~p: ~p ~p~n", [Id, Method, Params]),
 	Server ! {Method, Id, Params};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   method := Method0
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### REQUEST ~p~n", [Method]),
+	io:format("### REQUEST ~p: ~p~n", [Id, Method]),
 	Server ! {Method, Id, none};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   method := Method0,
@@ -132,8 +132,8 @@ request(Socket, Id, Method, Params) ->
 	Json = jsx:encode(Ans),
 	send(Socket, Json).
 
-reply(Socket, Id, Msg) when is_map(Msg) ->
-	io:format("REPLY ~p~n", [Msg]),
+reply(Socket, Id, Msg) when is_map(Msg); is_list(Msg) ->
+	io:format("REPLY ~p: ~p~n", [Id, Msg]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			result => Msg
@@ -142,7 +142,7 @@ reply(Socket, Id, Msg) when is_map(Msg) ->
 	send(Socket, Json);
 reply(Socket, Id, {error, Code0, Msg})  ->
 	Code = error_code(Code0),
-	io:format("ERROR ~p~n", [Msg]),
+	io:format("ERROR ~p: ~p~n", [Id, Msg]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			error => #{

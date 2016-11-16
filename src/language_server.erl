@@ -18,16 +18,23 @@
 -record(state, {
 				proxy,
 				stopped = false,
-				internal = #{},
-				requests = []
+				crt_id = 0,
+				pending_reads = [],
+				pending_writes = [],
+				pending_requests = [],
+				internal_state
 			   }).
 
 start([Port0]) ->
 	Port = list_to_integer(atom_to_list(Port0)),
 	erlang:register(?SERVER, self()),
-	Proxy = spawn_link(fun() -> language_server_proxy:start([?SERVER, Port]) end),
-	State = #state{proxy=Proxy},
-	loop(State).
+	Proxy = spawn_link(fun() ->
+							   language_server_proxy:start([?SERVER, Port])
+					   end),
+	State = #state{proxy = Proxy,
+				   internal_state = erlang_language_server:init()
+				  },
+	init(State).
 
 %% client API
 
@@ -52,67 +59,102 @@ publish_diagnostics(URI, Diagnostics) ->
 
 %%%%%%%%%%%%%%%%%%%%%
 
-loop(#state{stopped=true}) ->
-	receive
-		'exit' ->
-			erlang:halt()
-	end;
-loop(State=#state{proxy=Proxy}) ->
+init(State) ->
 	receive
 		{'initialize', Id, Args} ->
-			NewState = initialize(State, Id, Args),
-			loop(NewState);
+			Reply = erlang_language_server:initialize(State, Id, Args),
+			reply(State#state.proxy, Id, Reply),
+			loop(State)
+	end.
+
+
+loop(#state{stopped = true}) ->
+	receive
+		{'exit', _} ->
+			erlang:halt()
+	end;
+loop(State = #state{proxy = Proxy}) ->
+	receive
 		{'shutdown', _Id, _} ->
-			loop(State#state{stopped=true});
+			loop(State#state{stopped = true});
 		{'exit', _} ->
 			erlang:halt();
-		{'$/cancelRequest', #{id:=Id}} ->
-			cancel_request(Id),
-			loop(State);
+
+		{'$/cancelRequest', #{id := Id}} ->
+			NewState = cancel_read(Id, State),
+			loop(NewState);
 		{'workspace/didChangeConfiguration', #{settings := Settings}} ->
-			NewState = update_configuration(State, Settings),
+			TmpState = cancel_all_pending_reads(State),
+			NewState = erlang_language_server:updated_configuration(TmpState, Settings),
 			loop(NewState);
 		{'workspace/didChangeWatchedFiles', Args} ->
-			loop(State);
-		{'workspace/symbol', Id, Args} ->
-			loop(State);
+			TmpState = cancel_all_pending_reads(State),
+			NewState = erlang_language_server:updated_watched_files(TmpState, Args),
+			loop(NewState);
 		{'textDocument/didChange', Args} ->
-			loop(State);
+			TmpState = cancel_all_pending_reads(State),
+			NewState = erlang_language_server:updated_file(TmpState, Args),
+			loop(NewState);
 		{'textDocument/didClose', Args} ->
-			loop(State);
+			TmpState = cancel_all_pending_reads(State),
+			NewState = erlang_language_server:closed_file(TmpState, Args),
+			loop(NewState);
 		{'textDocument/didOpen', Args} ->
-			loop(State);
+			TmpState = cancel_all_pending_reads(State),
+			NewState = erlang_language_server:opened_file(TmpState, Args),
+			loop(NewState);
 		{'textDocument/didSave', Args} ->
+			TmpState = cancel_all_pending_reads(State),
+			NewState = erlang_language_server:saved_file(TmpState, Args),
+			loop(NewState);
+
+		{'workspace/symbol', Id, Args} ->
+			run(Id, workspace_symbol, Args, State),
 			loop(State);
 		{'textDocument/completion', Id, Args} ->
+			run(Id, completion, Args, State),
 			loop(State);
 		{'completionItem/resolve', Id, Args} ->
+			run(Id, completion_resolve, Args, State),
 			loop(State);
 		{'textDocument/hover', Id, Args} ->
+			run(Id, hover, Args, State),
 			loop(State);
 		{'textDocument/references', Id, Args} ->
+			run(Id, references, Args, State),
 			loop(State);
 		{'textDocument/documentHighlight', Id, Args} ->
+			run(Id, documentHighlight, Args, State),
 			loop(State);
 		{'textDocument/documentSymbol', Id, Args} ->
+			run(Id, document_symbol, Args, State),
 			loop(State);
 		{'textDocument/formatting', Id, Args} ->
+			run(Id, formatting, Args, State),
 			loop(State);
 		{'textDocument/rangeFormatting', Id, Args} ->
+			run(Id, range_formatting, Args, State),
 			loop(State);
 		{'textDocument/onTypeFormatting', Id, Args} ->
+			run(Id, on_type_formatting, Args, State),
 			loop(State);
 		{'textDocument/definition', Id, Args} ->
+			run(Id, definition, Args, State),
 			loop(State);
 		{'textDocument/signatureHelp', Id, Args} ->
+			run(Id, signature_help, Args, State),
 			loop(State);
 		{'textDocument/codeAction', Id, Args} ->
+			run(Id, code_action, Args, State),
 			loop(State);
 		{'textDocument/codeLens', Id, Args} ->
+			run(Id, code_lens, Args, State),
 			loop(State);
 		{'codeLens/resolve', Id, Args} ->
+			run(Id, cide_lens_resolve, Args, State),
 			loop(State);
 		{'textDocument/rename', Id, Args} ->
+			run(Id, rename, Args, State),
 			loop(State);
 
 		{show_message, Type, Msg} ->
@@ -121,8 +163,11 @@ loop(State=#state{proxy=Proxy}) ->
 					   message => iolist_to_binary(Msg)}},
 			loop(State);
 		{show_message_request, Type, Msg, Actions, Pid} ->
-			Id = erlang:unique_integer(),
-			NewState = State#state{requests=[{Id, Pid}|State#state.requests]},
+			Id = State#state.crt_id,
+			NewState = State#state{
+								   pending_requests = [{Id, Pid} | State#state.pending_requests],
+								   crt_id = Id + 1
+								  },
 			Proxy ! {request, Id, 'window/showMessageRequest',
 					 #{type => Type,
 					   message => iolist_to_binary(Msg),
@@ -144,12 +189,12 @@ loop(State=#state{proxy=Proxy}) ->
 			loop(State);
 
 		{'$reply', Id, Msg} ->
-			case lists:keytake(Id, 1, State#state.requests) of
+			case lists:keytake(Id, 1, State#state.pending_requests) of
 				false ->
 					loop(State);
 				{value, {Id, Pid}, Rest} ->
 					Pid ! Msg,
-					loop(State#state{requests=Rest})
+					loop(State#state{pending_requests=Rest})
 			end;
 
 		{_F, _A} ->
@@ -167,50 +212,37 @@ loop(State=#state{proxy=Proxy}) ->
 			loop(State)
 	end.
 
-reply(State, Id, Answer) ->
-	Proxy = State#state.proxy,
+reply(Proxy, Id, Answer) ->
 	Proxy ! {reply, Id, Answer}.
 
-initialize(State, Id, ClientCapabilities) ->
-	ServerCapabilities = initialize(),
-	reply(State, Id, ServerCapabilities),
-	I = State#state.internal,
-	State#state{internal = I#{
-							  client_capabilities => ClientCapabilities,
-							  server_capabilities => ServerCapabilities
-							 }
-			   }.
 
-initialize() ->
-	CompletionOptions = #{
-						  },
-	SignatureHelpOptions = #{
-							 },
-	% CodeLensOptions = #{},
-	DocumentOnTypeFormattingOptions = #{
-										},
-	Capabilities = #{
-					 textDocumentSync => 2,
-					 hoverProvider => true,
-					 completionProvider => CompletionOptions,
-					 signatureHelpProvider => SignatureHelpOptions,
-					 definitionProvider => true,
-					 referencesProvider => true,
-					 documentHighlightProvider => true,
-					 documentSymbolProvider => true,
-					 workspaceSymbolProvider => true,
-					 % codeActionProvider => true,
-					 % codeLensProvider => CodeLensOptions,
-					 documentFormattingProvider => true,
-					 documentRangeFormattingProvider => true,
-					 documentOnTypeFormattingProvider => DocumentOnTypeFormattingOptions,
-					 renameProvider => true
-					},
-	#{capabilities => Capabilities}.
+cancel_read(Id, #state{pending_reads=Reqs}=State) ->
+	case lists:keytake(Id, 1, Reqs) of
+		{value, {Id, Pid}, NewReqs} ->
+			Pid ! cancel,
+			Answer = receive
+						 X ->
+							 X
+					 after 5000 ->
+						 {error, internal_error, <<"operation timeout">>}
+					 end,
+			reply(State#state.proxy, Id, Answer),
+			State#state{pending_reads=NewReqs};
+		false ->
+			State
+	end.
 
-cancel_request(_Id) ->
-	ok.
+cancel_all_pending_reads(#state{pending_reads=Reqs}=State) ->
+	[cancel_read(X, State) || {X, _} <- Reqs],
+	State#state{pending_reads=[]}.
 
-update_configuration(State, _Settings) ->
-	%% TODO implement
-	State.
+run(Id, Method, Params, State) ->
+	Self = self(),
+	spawn(fun() ->
+				  %% TODO make it cancellable (and with possible partial results)
+				  Internal = State#state.internal_state,
+				  Result = erlang_language_server:Method(Params, Internal),
+				  reply(State#state.proxy, Id, Result)
+		  end).
+
+
