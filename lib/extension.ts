@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
             let ebin = path.resolve(context.extensionPath, "out", "ebin");
             let port = 4900;
             let args = [
-                '-noshell',
+                '-noshell', '+pc', 'unicode',
                 '-s', 'language_server', 'start', port.toString()
             ];
 

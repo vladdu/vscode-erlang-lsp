@@ -60,21 +60,21 @@ process_message(Server, D) ->
 
 parse(Data) ->
 	Req = decode(jsx:decode(Data, [return_maps])),
-	%% 	io:format(">>> ~p~n", [Req]),
+	%% 	io:format(">>> ~tp~n", [Req]),
 	Req.
 
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   result := Result
 				  }) ->
-	io:format("### RESULT ~p: ~p~n", [Id, Result]),
+	io:format("### RESULT ~p: ~tp~n", [Id, Result]),
 	Server ! {'$reply', Id, Result},
 	ok;
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   error := Error
 				  }) ->
-	io:format("### RESULT ~p: ~p~n", [Id, Error]),
+	io:format("### RESULT ~p: ~tp~n", [Id, Error]),
 	Server ! {'$reply', Id, Error},
 	ok;
 dispatch(Server, #{jsonrpc := <<"2.0">>,
@@ -83,38 +83,38 @@ dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   params := Params
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### REQUEST ~p: ~p ~p~n", [Id, Method, Params]),
+	io:format("### REQUEST ~p: ~tp ~tp~n", [Id, Method, Params]),
 	Server ! {Method, Id, Params};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   method := Method0
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### REQUEST ~p: ~p~n", [Id, Method]),
+	io:format("### REQUEST ~p: ~tp~n", [Id, Method]),
 	Server ! {Method, Id, none};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   method := Method0,
 				   params := Params
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### NOTIFICATION ~p ~p~n", [Method, Params]),
+	io:format("### NOTIFICATION ~tp ~tp~n", [Method, Params]),
 	Server ! {Method, Params};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   method := Method0
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### NOTIFICATION ~p~n", [Method]),
+	io:format("### NOTIFICATION ~tp~n", [Method]),
 	Server ! {Method, none}.
 
 send(Socket, Json0) ->
 	Json = encode(Json0),
 	Hdr = io_lib:format("Content-Length: ~w\r\n\r\n", [size(Json)]),
-	%% 	io:format("<<<< ~s~s~n", [Hdr, Json]),
+	%% 	io:format("<<<< ~ts~ts~n", [Hdr, Json]),
 	gen_tcp:send(Socket, Hdr),
 	gen_tcp:send(Socket, Json).
 
 notify(Socket, Method, Params) ->
-	io:format("NOTIFY ~p ~p~n", [Method, Params]),
+	io:format("NOTIFY ~tp ~tp~n", [Method, Params]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			method => Method,
 			params => Params
@@ -123,7 +123,7 @@ notify(Socket, Method, Params) ->
 	send(Socket, Json).
 
 request(Socket, Id, Method, Params) ->
-	io:format("REQUEST ~p: ~p ~p~n", [Id, Method, Params]),
+	io:format("REQUEST ~p: ~tp ~tp~n", [Id, Method, Params]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			method => Method,
@@ -133,7 +133,7 @@ request(Socket, Id, Method, Params) ->
 	send(Socket, Json).
 
 reply(Socket, Id, Msg) when is_map(Msg); is_list(Msg) ->
-	io:format("REPLY ~p: ~p~n", [Id, Msg]),
+	io:format("REPLY ~p: ~tp~n", [Id, Msg]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			result => Msg
@@ -142,7 +142,7 @@ reply(Socket, Id, Msg) when is_map(Msg); is_list(Msg) ->
 	send(Socket, Json);
 reply(Socket, Id, {error, Code0, Msg})  ->
 	Code = error_code(Code0),
-	io:format("ERROR ~p: ~p~n", [Id, Msg]),
+	io:format("ERROR ~p: ~tp~n", [Id, Msg]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			error => #{
@@ -153,12 +153,12 @@ reply(Socket, Id, {error, Code0, Msg})  ->
 	Json = jsx:encode(Ans),
 	send(Socket, Json);
 reply(Socket, Id, Msg) ->
-	io:format("Erroneous message ~p~n",[{Socket, Id, Msg}]),
+	io:format("Erroneous message ~tp~n",[{Socket, Id, Msg}]),
 	ok.
 
 decode(Json) when is_map(Json) ->
 	L1 = maps:to_list(Json),
-	L2 = [{erlang:binary_to_atom(K, latin1), decode(V)} || {K, V} <- L1],
+	L2 = [{erlang:binary_to_atom(K, unicode), decode(V)} || {K, V} <- L1],
 	maps:from_list(L2);
 decode(Json) when is_list(Json) ->
 	[decode(V) || V <- Json];
@@ -167,7 +167,7 @@ decode(V) ->
 
 encode(Json) when is_map(Json) ->
 	L1 = maps:to_list(Json),
-	L2 = [{erlang:atom_to_binary(K, latin1), encode(V)} || {K, V} <- L1],
+	L2 = [{erlang:atom_to_binary(K, unicode), encode(V)} || {K, V} <- L1],
 	maps:from_list(L2);
 encode(Json) when is_list(Json) ->
 	[encode(V) || V <- Json];

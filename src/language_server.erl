@@ -61,10 +61,10 @@ publish_diagnostics(URI, Diagnostics) ->
 
 init(State) ->
 	receive
-		{'initialize', Id, Args} ->
-			Reply = erlang_language_server:initialize(State, Id, Args),
-			reply(State#state.proxy, Id, Reply),
-			loop(State)
+		{'initialize', Id, ClientCapabilities} ->
+			{ServerCapabilities, NewState} = erlang_language_server:initialize(State#state.internal_state, ClientCapabilities),
+			reply(State#state.proxy, Id, ServerCapabilities),
+			loop(State#state{internal_state=NewState})
 	end.
 
 
@@ -85,46 +85,46 @@ loop(State = #state{proxy = Proxy}) ->
 			loop(NewState);
 		{'workspace/didChangeConfiguration', #{settings := Settings}} ->
 			TmpState = cancel_all_pending_reads(State),
-			NewState = erlang_language_server:updated_configuration(TmpState, Settings),
-			loop(NewState);
-		{'workspace/didChangeWatchedFiles', Args} ->
+			NewState = erlang_language_server:updated_configuration(TmpState#state.internal_state, Settings),
+			loop(TmpState#state{internal_state=NewState});
+		{'workspace/didChangeWatchedFiles', #{changes := Changes}} ->
 			TmpState = cancel_all_pending_reads(State),
-			NewState = erlang_language_server:updated_watched_files(TmpState, Args),
-			loop(NewState);
-		{'textDocument/didChange', Args} ->
+			NewState = erlang_language_server:updated_watched_files(TmpState#state.internal_state, Changes),
+			loop(TmpState#state{internal_state=NewState});
+		{'textDocument/didOpen', #{textDocument := Document}} ->
 			TmpState = cancel_all_pending_reads(State),
-			NewState = erlang_language_server:updated_file(TmpState, Args),
-			loop(NewState);
-		{'textDocument/didClose', Args} ->
+			NewState = erlang_language_server:opened_file(TmpState#state.internal_state, Document),
+			loop(TmpState#state{internal_state=NewState});
+		{'textDocument/didChange', #{textDocument := VersionedDocument, contentChanges := Changes}} ->
 			TmpState = cancel_all_pending_reads(State),
-			NewState = erlang_language_server:closed_file(TmpState, Args),
-			loop(NewState);
-		{'textDocument/didOpen', Args} ->
+			NewState = erlang_language_server:changed_file(TmpState#state.internal_state, VersionedDocument, Changes),
+			loop(TmpState#state{internal_state=NewState});
+		{'textDocument/didSave', #{textDocument := DocumentId}} ->
 			TmpState = cancel_all_pending_reads(State),
-			NewState = erlang_language_server:opened_file(TmpState, Args),
-			loop(NewState);
-		{'textDocument/didSave', Args} ->
+			NewState = erlang_language_server:saved_file(TmpState#state.internal_state, DocumentId),
+			loop(TmpState#state{internal_state=NewState});
+		{'textDocument/didClose', #{textDocument := DocumentId}} ->
 			TmpState = cancel_all_pending_reads(State),
-			NewState = erlang_language_server:saved_file(TmpState, Args),
-			loop(NewState);
+			NewState = erlang_language_server:closed_file(TmpState#state.internal_state, DocumentId),
+			loop(TmpState#state{internal_state=NewState});
 
 		{'workspace/symbol', Id, Args} ->
 			run(Id, workspace_symbol, Args, State),
 			loop(State);
-		{'textDocument/completion', Id, Args} ->
-			run(Id, completion, Args, State),
+		{'textDocument/completion', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
+			run(Id, completion, {URI, Position}, State),
 			loop(State);
 		{'completionItem/resolve', Id, Args} ->
 			run(Id, completion_resolve, Args, State),
 			loop(State);
-		{'textDocument/hover', Id, Args} ->
-			run(Id, hover, Args, State),
+		{'textDocument/hover', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
+			run(Id, hover, {URI, Position}, State),
 			loop(State);
 		{'textDocument/references', Id, Args} ->
 			run(Id, references, Args, State),
 			loop(State);
 		{'textDocument/documentHighlight', Id, Args} ->
-			run(Id, documentHighlight, Args, State),
+			run(Id, document_highlight, Args, State),
 			loop(State);
 		{'textDocument/documentSymbol', Id, Args} ->
 			run(Id, document_symbol, Args, State),
@@ -151,7 +151,7 @@ loop(State = #state{proxy = Proxy}) ->
 			run(Id, code_lens, Args, State),
 			loop(State);
 		{'codeLens/resolve', Id, Args} ->
-			run(Id, cide_lens_resolve, Args, State),
+			run(Id, code_lens_resolve, Args, State),
 			loop(State);
 		{'textDocument/rename', Id, Args} ->
 			run(Id, rename, Args, State),
@@ -237,11 +237,11 @@ cancel_all_pending_reads(#state{pending_reads=Reqs}=State) ->
 	State#state{pending_reads=[]}.
 
 run(Id, Method, Params, State) ->
-	Self = self(),
+	%% Self = self(),
 	spawn(fun() ->
 				  %% TODO make it cancellable (and with possible partial results)
 				  Internal = State#state.internal_state,
-				  Result = erlang_language_server:Method(Params, Internal),
+				  Result = erlang_language_server:Method(Internal, Params),
 				  reply(State#state.proxy, Id, Result)
 		  end).
 
