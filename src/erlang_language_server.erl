@@ -9,7 +9,7 @@
 		 opened_file/2,
 		 closed_file/2,
 		 saved_file/2,
-		 
+
 		 workspace_symbol/2,
 		 completion/2,
 		 completion_resolve/2,
@@ -45,10 +45,10 @@ initialize(State, ClientCapabilities) ->
 					 hoverProvider => true,
 					 completionProvider => #{
 											 resolveProvider => true,
-											 triggerCharacters => []
+											 triggerCharacters => [<<":">>]
 											},
 					 signatureHelpProvider => #{
-												triggerCharacters => []
+												triggerCharacters => [<<"(">>]
 											   },
 					 definitionProvider => true,
 					 referencesProvider => true,
@@ -95,14 +95,16 @@ closed_file(State, #{uri:=URI}) ->
 	NewOpen = lists:keydelete(URI, 1, Open),
 	State#state{open_files=NewOpen}.
 
-workspace_symbol(_State, _Args) ->
-	ok.
+workspace_symbol(_State, _Query) ->
+	%% symbol = #{name, kind, location, conainerName?}}
+	[].
 
-%% -type completion_item() :: #{'label'=>string(), 'kind'=>integer(), ...}.
+%% completion_item() :: label, kind?, detail?, documentation?, sortText?, filterText?,
+%% insertText?, textEdit? additionalTextEdits?, command? data?
 
 completion(_State, {_DocumentId, _Position}) ->
 	#{
-	  isIncomplete=>false,
+	  isIncomplete => false,
 	  items => []
 	 }.
 
@@ -117,40 +119,45 @@ hover(_State, {_DocumentId, _Position}) ->
 	 }.
 
 references(_State, _Args) ->
-	ok.
+	[].
 
 document_highlight(_State, _Args) ->
-	ok.
+	[].
 
 document_symbol(_State, _Args) ->
-	ok.
+	[].
 
 formatting(_State, _Args) ->
-	ok.
+	[].
 
 range_formatting(_State, _Args) ->
-	ok.
+	[].
 
 on_type_formatting(_State, _Args) ->
-	ok.
+	[].
 
 definition(_State, _Args) ->
-	ok.
+	[].
 
 signature_help(_State, _Args) ->
-	ok.
+	#{
+	  signatures => [],
+	  activeSignature => null,
+	  activeParameter => null
+	  }.
 
-code_action(_State, _Args) ->
-	ok.
+code_action(_State, {_URI, _Range, _Context}) ->
+	[].
 
 code_lens(_State, _Args) ->
-	ok.
+	[].
 
-code_lens_resolve(_State, _Args) ->
-	ok.
+code_lens_resolve(_State, Item) ->
+	Item.
 
 rename(_State, _Args) ->
-	ok.
+	%% #{URI: [edits]}
+	#{changes => []}.
 
 
 %%%%%%%%%%%%%%%%%
@@ -163,3 +170,28 @@ process_watched(#{uri:=_URI, type:=2}, List) ->
 	List;
 process_watched(#{uri:=URI, type:=3}, List) ->
 	lists:delete(URI, List).
+
+%% completion_item_kind(text) -> 1;
+%% %completion_item_kind(method) -> 2;
+%% completion_item_kind(function) -> 3;
+%% completion_item_kind(constructor) -> 4;
+%% %completion_item_kind(field) -> 5;
+%% completion_item_kind(variable) -> 6;
+%% %completion_item_kind(class) -> 7;
+%% completion_item_kind(interface) -> 8;
+%% completion_item_kind(module) -> 9;
+%% completion_item_kind(property) -> 10;
+%% completion_item_kind(unit) -> 11;
+%% completion_item_kind(value) -> 12;
+%% %completion_item_kind(enum) -> 13;
+%% completion_item_kind(keyword) -> 14;
+%% completion_item_kind(snippet) -> 15;
+%% %completion_item_kind(color) -> 16;
+%% completion_item_kind(file) -> 17;
+%% completion_item_kind(reference) -> 18;
+%%
+%% completion_item_kind(type) -> 7;
+%% completion_item_kind(macro) -> 2;
+%%
+%% completion_item_kind(_) -> 0.
+%%

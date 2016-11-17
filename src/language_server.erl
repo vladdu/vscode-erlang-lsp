@@ -108,53 +108,53 @@ loop(State = #state{proxy = Proxy}) ->
 			NewState = erlang_language_server:closed_file(TmpState#state.internal_state, DocumentId),
 			loop(TmpState#state{internal_state=NewState});
 
-		{'workspace/symbol', Id, Args} ->
-			run(Id, workspace_symbol, Args, State),
+		{'workspace/symbol', Id, #{query:=Query}} ->
+			run(Id, workspace_symbol, Query, State),
 			loop(State);
 		{'textDocument/completion', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
 			run(Id, completion, {URI, Position}, State),
 			loop(State);
-		{'completionItem/resolve', Id, Args} ->
-			run(Id, completion_resolve, Args, State),
+		{'completionItem/resolve', Id, CompletionItem} ->
+			run(Id, completion_resolve, CompletionItem, State),
 			loop(State);
 		{'textDocument/hover', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
 			run(Id, hover, {URI, Position}, State),
 			loop(State);
-		{'textDocument/references', Id, Args} ->
-			run(Id, references, Args, State),
+		{'textDocument/references', Id, #{textDocument:=#{uri:=URI}, position:=Position, context:=Context}} ->
+			run(Id, references, {URI, Position, Context}, State),
 			loop(State);
-		{'textDocument/documentHighlight', Id, Args} ->
-			run(Id, document_highlight, Args, State),
+		{'textDocument/documentHighlight', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
+			run(Id, document_highlight, {URI, Position}, State),
 			loop(State);
-		{'textDocument/documentSymbol', Id, Args} ->
-			run(Id, document_symbol, Args, State),
+		{'textDocument/documentSymbol', Id, #{textDocument:=#{uri:=URI}}} ->
+			run(Id, document_symbol, URI, State),
 			loop(State);
-		{'textDocument/formatting', Id, Args} ->
-			run(Id, formatting, Args, State),
+		{'textDocument/formatting', Id,  #{textDocument:=#{uri:=URI}, options:=Options}} ->
+			run(Id, formatting, {URI, Options}, State),
 			loop(State);
-		{'textDocument/rangeFormatting', Id, Args} ->
-			run(Id, range_formatting, Args, State),
+		{'textDocument/rangeFormatting', Id, #{textDocument:=#{uri:=URI}, range:=Range, options:=Options}} ->
+			run(Id, range_formatting, {URI, Range, Options}, State),
 			loop(State);
-		{'textDocument/onTypeFormatting', Id, Args} ->
-			run(Id, on_type_formatting, Args, State),
+		{'textDocument/onTypeFormatting', Id, #{textDocument:=#{uri:=URI}, position:=Position, ch:=Ch, options:=Options}} ->
+			run(Id, on_type_formatting, {URI, Position, Ch, Options}, State),
 			loop(State);
-		{'textDocument/definition', Id, Args} ->
-			run(Id, definition, Args, State),
+		{'textDocument/definition', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
+			run(Id, definition, {URI, Position}, State),
 			loop(State);
-		{'textDocument/signatureHelp', Id, Args} ->
-			run(Id, signature_help, Args, State),
+		{'textDocument/signatureHelp', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
+			run(Id, signature_help, {URI, Position}, State),
 			loop(State);
-		{'textDocument/codeAction', Id, Args} ->
-			run(Id, code_action, Args, State),
+		{'textDocument/codeAction', Id, #{textDocument:=#{uri:=URI}, range:=Range, context:=Context}} ->
+			run(Id, code_action, {URI, Range, Context}, State),
 			loop(State);
-		{'textDocument/codeLens', Id, Args} ->
-			run(Id, code_lens, Args, State),
+		{'textDocument/codeLens', Id, #{textDocument:=#{uri:=URI}}} ->
+			run(Id, code_lens, URI, State),
 			loop(State);
-		{'codeLens/resolve', Id, Args} ->
-			run(Id, code_lens_resolve, Args, State),
+		{'codeLens/resolve', Id, Item} ->
+			run(Id, code_lens_resolve, Item, State),
 			loop(State);
-		{'textDocument/rename', Id, Args} ->
-			run(Id, rename, Args, State),
+		{'textDocument/rename', Id, #{textDocument:=#{uri:=URI}, position:=Position, newName:=NewName}} ->
+			run(Id, rename, {URI, Position, NewName}, State),
 			loop(State);
 
 		{show_message, Type, Msg} ->
