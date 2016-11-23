@@ -109,52 +109,73 @@ loop(State = #state{proxy = Proxy}) ->
 			loop(TmpState#state{internal_state=NewState});
 
 		{'workspace/symbol', Id, #{query:=Query}} ->
-			run(Id, workspace_symbol, Query, State),
+			Result = case start_worker(Id, workspace_symbol, Query, State) of
+						 nil ->
+							 [];
+						 R ->
+							 R
+					 end,
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/completion', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			run(Id, completion, {URI, Position}, State),
+			Result = start_worker(Id, completion, {URI, Position}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'completionItem/resolve', Id, CompletionItem} ->
-			run(Id, completion_resolve, CompletionItem, State),
+			Result = start_worker(Id, completion_resolve, CompletionItem, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/hover', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			run(Id, hover, {URI, Position}, State),
+			Result = start_worker(Id, hover, {URI, Position}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/references', Id, #{textDocument:=#{uri:=URI}, position:=Position, context:=Context}} ->
-			run(Id, references, {URI, Position, Context}, State),
+			Result = start_worker(Id, references, {URI, Position, Context}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/documentHighlight', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			run(Id, document_highlight, {URI, Position}, State),
+			Result = start_worker(Id, document_highlight, {URI, Position}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/documentSymbol', Id, #{textDocument:=#{uri:=URI}}} ->
-			run(Id, document_symbol, URI, State),
+			Result = start_worker(Id, document_symbol, URI, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/formatting', Id,  #{textDocument:=#{uri:=URI}, options:=Options}} ->
-			run(Id, formatting, {URI, Options}, State),
+			Result = start_worker(Id, formatting, {URI, Options}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/rangeFormatting', Id, #{textDocument:=#{uri:=URI}, range:=Range, options:=Options}} ->
-			run(Id, range_formatting, {URI, Range, Options}, State),
+			Result = start_worker(Id, range_formatting, {URI, Range, Options}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/onTypeFormatting', Id, #{textDocument:=#{uri:=URI}, position:=Position, ch:=Ch, options:=Options}} ->
-			run(Id, on_type_formatting, {URI, Position, Ch, Options}, State),
+			Result = start_worker(Id, on_type_formatting, {URI, Position, Ch, Options}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/definition', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			run(Id, definition, {URI, Position}, State),
+			Result = start_worker(Id, definition, {URI, Position}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/signatureHelp', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			run(Id, signature_help, {URI, Position}, State),
+			Result = start_worker(Id, signature_help, {URI, Position}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/codeAction', Id, #{textDocument:=#{uri:=URI}, range:=Range, context:=Context}} ->
-			run(Id, code_action, {URI, Range, Context}, State),
+			Result = start_worker(Id, code_action, {URI, Range, Context}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/codeLens', Id, #{textDocument:=#{uri:=URI}}} ->
-			run(Id, code_lens, URI, State),
+			Result = start_worker(Id, code_lens, URI, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'codeLens/resolve', Id, Item} ->
-			run(Id, code_lens_resolve, Item, State),
+			Result = start_worker(Id, code_lens_resolve, Item, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 		{'textDocument/rename', Id, #{textDocument:=#{uri:=URI}, position:=Position, newName:=NewName}} ->
-			run(Id, rename, {URI, Position, NewName}, State),
+			Result = start_worker(Id, rename, {URI, Position, NewName}, State),
+			reply(Proxy, Id, Result),
 			loop(State);
 
 		{show_message, Type, Msg} ->
@@ -236,13 +257,13 @@ cancel_all_pending_reads(#state{pending_reads=Reqs}=State) ->
 	[cancel_read(X, State) || {X, _} <- Reqs],
 	State#state{pending_reads=[]}.
 
-run(Id, Method, Params, State) ->
-	%% Self = self(),
+start_worker(Id, Method, Params, State) ->
 	spawn(fun() ->
-				  %% TODO make it cancellable (and with possible partial results)
-				  Internal = State#state.internal_state,
-				  Result = erlang_language_server:Method(Internal, Params),
+				  Fun = fun(Reporter) ->
+								Internal = State#state.internal_state,
+								erlang_language_server:Method(Internal, Params, Reporter)
+						end,
+				  {ok, Key} = cancellable_worker:start(Fun),
+				  {ok, Result} = cancellable_worker:yield(Key),
 				  reply(State#state.proxy, Id, Result)
 		  end).
-
-

@@ -13,7 +13,7 @@
 		 workspace_symbol/2,
 		 completion/2,
 		 completion_resolve/2,
-		 hover/2,
+		 hover/3,
 		 references/2,
 		 document_highlight/2,
 		 document_symbol/2,
@@ -45,10 +45,10 @@ initialize(State, ClientCapabilities) ->
 					 hoverProvider => true,
 					 completionProvider => #{
 											 resolveProvider => true,
-											 triggerCharacters => [<<":">>]
+											 triggerCharacters => []
 											},
 					 signatureHelpProvider => #{
-												triggerCharacters => [<<"(">>]
+												triggerCharacters => []
 											   },
 					 definitionProvider => true,
 					 referencesProvider => true,
@@ -56,26 +56,29 @@ initialize(State, ClientCapabilities) ->
 					 documentSymbolProvider => true,
 					 workspaceSymbolProvider => true,
 					 codeActionProvider => true,
-					 codeLensProvider => #{
-										   resolveProvider => true
-										  },
+%% 					 codeLensProvider => #{
+%% 										   resolveProvider => true
+%% 										  },
 					 documentFormattingProvider => true,
 					 documentRangeFormattingProvider => true,
-					 documentOnTypeFormattingProvider => #{
-														   firstTriggerCharacter => <<"">>,
-														   moreTriggerCharacters => []
-														  },
+%% 					 documentOnTypeFormattingProvider => #{
+%% 														   firstTriggerCharacter => <<"">>,
+%% 														   moreTriggerCharacters => []
+%% 														  },
 					 renameProvider => true
 					},
 	Server = #{capabilities => Capabilities},
 	{Server, State#state{client_capabilities=ClientCapabilities, server_capabilities=Server}}.
 
 updated_configuration(State, Settings) ->
+	%% TODO start parsing & processing
+	%% TODO start compile
 	State#state{configuration=Settings}.
 
 updated_watched_files(State, _Changes) ->
 	Watched = State#state.watched_files,
 	NewWatched = lists:foldl(fun process_watched/2, [], Watched),
+	%% TODO start compile
 	State#state{watched_files=NewWatched}.
 
 opened_file(State, #{uri:=URI, languageId:=_Language, version:=_Version, text:=_Text}=Item) ->
@@ -85,6 +88,7 @@ opened_file(State, #{uri:=URI, languageId:=_Language, version:=_Version, text:=_
 
 changed_file(State, #{uri:=_URI, version:=_Version}, _Changes) ->
 	%% TODO start parsing & processing
+	%% TODO start compile
 	State.
 
 saved_file(State, #{uri:=_URI}) ->
@@ -96,7 +100,7 @@ closed_file(State, #{uri:=URI}) ->
 	State#state{open_files=NewOpen}.
 
 workspace_symbol(_State, _Query) ->
-	%% symbol = #{name, kind, location, conainerName?}}
+	%% symbol = #{name, kind, location, containerName?}}
 	[].
 
 %% completion_item() :: label, kind?, detail?, documentation?, sortText?, filterText?,
@@ -111,12 +115,13 @@ completion(_State, {_DocumentId, _Position}) ->
 completion_resolve(_State, Item) ->
 	Item.
 
-hover(_State, {_DocumentId, _Position}) ->
+hover(_State, {_DocumentId, _Position}, Reporter) ->
 	%% [markedstring()]:: String (=markdown), #{language, value}
-	#{
+	Res = #{
 	  contents => []
 	 %%, range => language_server_utils:range(_Position, _Position)
-	 }.
+	 },
+	Reporter(final, Res).
 
 references(_State, _Args) ->
 	[].
@@ -171,27 +176,50 @@ process_watched(#{uri:=_URI, type:=2}, List) ->
 process_watched(#{uri:=URI, type:=3}, List) ->
 	lists:delete(URI, List).
 
-%% completion_item_kind(text) -> 1;
-%% %completion_item_kind(method) -> 2;
-%% completion_item_kind(function) -> 3;
-%% completion_item_kind(constructor) -> 4;
-%% %completion_item_kind(field) -> 5;
-%% completion_item_kind(variable) -> 6;
-%% %completion_item_kind(class) -> 7;
-%% completion_item_kind(interface) -> 8;
-%% completion_item_kind(module) -> 9;
-%% completion_item_kind(property) -> 10;
-%% completion_item_kind(unit) -> 11;
-%% completion_item_kind(value) -> 12;
-%% %completion_item_kind(enum) -> 13;
-%% completion_item_kind(keyword) -> 14;
-%% completion_item_kind(snippet) -> 15;
-%% %completion_item_kind(color) -> 16;
-%% completion_item_kind(file) -> 17;
-%% completion_item_kind(reference) -> 18;
-%%
-%% completion_item_kind(type) -> 7;
-%% completion_item_kind(macro) -> 2;
-%%
-%% completion_item_kind(_) -> 0.
-%%
+completion_item_kind(text) -> 1;
+completion_item_kind(method) -> 2;
+completion_item_kind(function) -> 3;
+completion_item_kind(constructor) -> 4;
+completion_item_kind(field) -> 5;
+completion_item_kind(variable) -> 6;
+completion_item_kind(class) -> 7;
+completion_item_kind(interface) -> 8;
+completion_item_kind(module) -> 9;
+completion_item_kind(property) -> 10;
+completion_item_kind(unit) -> 11;
+completion_item_kind(value) -> 12;
+completion_item_kind(enum) -> 13;
+completion_item_kind(keyword) -> 14;
+completion_item_kind(snippet) -> 15;
+completion_item_kind(color) -> 16;
+completion_item_kind(file) -> 17;
+completion_item_kind(reference) -> 18;
+%
+completion_item_kind(type) -> 7;
+completion_item_kind(macro) -> 2;
+%
+completion_item_kind(_) -> 0.
+
+symbol_kind(file) -> 1;
+symbol_kind(module) -> 2;
+symbol_kind(namespace) -> 3;
+symbol_kind(package) -> 4;
+symbol_kind(class) -> 5;
+symbol_kind(method) -> 6;
+symbol_kind(property) -> 7;
+symbol_kind(field) -> 8;
+symbol_kind(constructor) -> 9;
+symbol_kind(enum) -> 10;
+symbol_kind(interface) -> 11;
+symbol_kind(function) -> 12;
+symbol_kind(variable) -> 13;
+symbol_kind(constant) -> 14;
+symbol_kind(string) -> 15;
+symbol_kind(number) -> 16;
+symbol_kind(boolean) -> 17;
+symbol_kind(array) -> 18;
+%
+symbol_kind(type) -> 5;
+symbol_kind(macro) -> 6;
+%
+symbol_kind(_) -> 0.
