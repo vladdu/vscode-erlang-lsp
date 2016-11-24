@@ -10,22 +10,24 @@
 		 closed_file/2,
 		 saved_file/2,
 
-		 workspace_symbol/2,
-		 completion/2,
-		 completion_resolve/2,
+		 workspace_symbol/3,
+		 completion/3,
+		 completion_resolve/3,
 		 hover/3,
-		 references/2,
-		 document_highlight/2,
-		 document_symbol/2,
-		 formatting/2,
-		 range_formatting/2,
-		 on_type_formatting/2,
-		 definition/2,
-		 signature_help/2,
-		 code_action/2,
-		 code_lens/2,
-		 code_lens_resolve/2,
-		 rename/2
+		 references/3,
+		 document_highlight/3,
+		 document_symbol/3,
+		 formatting/3,
+		 range_formatting/3,
+		 on_type_formatting/3,
+		 definition/3,
+		 signature_help/3,
+		 code_action/3,
+		 code_lens/3,
+		 code_lens_resolve/3,
+		 rename/3,
+
+		 default_answer/1
 		]).
 
 -record(state, {
@@ -99,21 +101,24 @@ closed_file(State, #{uri:=URI}) ->
 	NewOpen = lists:keydelete(URI, 1, Open),
 	State#state{open_files=NewOpen}.
 
-workspace_symbol(_State, _Query) ->
+workspace_symbol(_State, _Query, Reporter) ->
 	%% symbol = #{name, kind, location, containerName?}}
-	[].
+	Res = [],
+	Reporter(final, Res).
 
 %% completion_item() :: label, kind?, detail?, documentation?, sortText?, filterText?,
 %% insertText?, textEdit? additionalTextEdits?, command? data?
 
-completion(_State, {_DocumentId, _Position}) ->
-	#{
+completion(_State, {_DocumentId, _Position}, Reporter) ->
+	Res = #{
 	  isIncomplete => false,
 	  items => []
-	 }.
+	 },
+	Reporter(final, Res).
 
-completion_resolve(_State, Item) ->
-	Item.
+completion_resolve(_State, Item, Reporter) ->
+	Res = Item,
+	Reporter(final, Res).
 
 hover(_State, {_DocumentId, _Position}, Reporter) ->
 	%% [markedstring()]:: String (=markdown), #{language, value}
@@ -123,46 +128,58 @@ hover(_State, {_DocumentId, _Position}, Reporter) ->
 	 },
 	Reporter(final, Res).
 
-references(_State, _Args) ->
-	[].
+references(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-document_highlight(_State, _Args) ->
-	[].
+document_highlight(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-document_symbol(_State, _Args) ->
-	[].
+document_symbol(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-formatting(_State, _Args) ->
-	[].
+formatting(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-range_formatting(_State, _Args) ->
-	[].
+range_formatting(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-on_type_formatting(_State, _Args) ->
-	[].
+on_type_formatting(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-definition(_State, _Args) ->
-	[].
+definition(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-signature_help(_State, _Args) ->
-	#{
+signature_help(_State, _Args, Reporter) ->
+	Res = #{
 	  signatures => [],
 	  activeSignature => null,
 	  activeParameter => null
-	  }.
+	  },
+	Reporter(final, Res).
 
-code_action(_State, {_URI, _Range, _Context}) ->
-	[].
+code_action(_State, {_URI, _Range, _Context}, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-code_lens(_State, _Args) ->
-	[].
+code_lens(_State, _Args, Reporter) ->
+	Res = [],
+	Reporter(final, Res).
 
-code_lens_resolve(_State, Item) ->
-	Item.
+code_lens_resolve(_State, Item, Reporter) ->
+		Res = Item,
+	Reporter(final, Res).
 
-rename(_State, _Args) ->
+rename(_State, _Args, Reporter) ->
 	%% #{URI: [edits]}
-	#{changes => []}.
+	Res = #{changes => []},
+	Reporter(final, Res).
 
 
 %%%%%%%%%%%%%%%%%
@@ -223,3 +240,14 @@ symbol_kind(type) -> 5;
 symbol_kind(macro) -> 6;
 %
 symbol_kind(_) -> 0.
+
+default_answer(completion) ->
+	null;
+default_answer(completion_resolve) ->
+	null;
+default_answer(hover) ->
+	null;
+default_answer(signature_help) ->
+	null;
+default_answer(_) ->
+	[].

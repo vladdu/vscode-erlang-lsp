@@ -38,11 +38,22 @@ start(Module, Function, Args) ->
 %% - {error, {Value1, Value2}} : unexpected 'final' Value2 reported (either
 %%     after another 'final' or after 'partial's Value1)
 check(MonPid) when is_pid(MonPid) ->
-	gen_server:call(MonPid, check).
+	case is_process_alive(MonPid) of
+		true ->
+			gen_server:call(MonPid, check);
+		false ->
+			{error, noproc}
+	end.
 
 %% Cancels the worker and returns the current results.
 cancel(MonPid) when is_pid(MonPid) ->
-	gen_server:call(MonPid, cancel).
+	case is_process_alive(MonPid) of
+		true ->
+			io:format("*** ~p~n", [{MonPid}]),
+			catch gen_server:call(MonPid, cancel);
+		false ->
+			{error, noproc}
+	end.
 cancel(MonPid, Timeout) when is_pid(MonPid) ->
 	gen_server:call(MonPid, cancel, Timeout).
 
@@ -59,11 +70,11 @@ yield(MonPid, Timeout) when is_pid(MonPid) ->
 -record(state, {
 				worker_pid,
 				results = {partial, undefined},
-				yielding = false,
-				worker_running = false
+				yielding = false
 			   }).
 
 init(WorkerFun) ->
+	process_flag(trap_exit, true),
 	Monitor = self(),
 	Report = fun(partial, V) -> gen_server:cast(Monitor, {partial, V});
 				(final, V) -> gen_server:cast(Monitor, {final, V})
@@ -71,25 +82,29 @@ init(WorkerFun) ->
 	{WrkPid, _Ref} = spawn_monitor(fun() ->
 										   WorkerFun(Report)
 								   end),
-	{ok, #state{worker_pid=WrkPid, worker_running = true}}.
+	{ok, #state{worker_pid=WrkPid}}.
 
 
-handle_call(check, _From, State=#state{results=Results, worker_running=true}) ->
+handle_call(check, _From, State=#state{results=Results, worker_pid=Pid}) when is_pid(Pid) ->
 	Reply = adjust(Results),
 	{reply, Reply, State};
-handle_call(check, _From, State=#state{results=Results, worker_running=false}) ->
+handle_call(check, _From, State=#state{results=Results}) ->
 	{_, Reply} = adjust(Results),
 	{reply, {final, Reply}, State};
-handle_call(cancel, _From, State=#state{results=Results, worker_pid=Pid}) ->
+handle_call(cancel, _From, State=#state{results=Results, worker_pid=Pid}) when is_pid(Pid) ->
 	exit(Pid, kill),
 	{_, Reply} = adjust(Results),
-	{stop, normal, {ok, Reply}, State};
-handle_call(yield, _From, State=#state{worker_running=false, results=Results}) ->
+	{reply, {ok, Reply}, State};
+handle_call(cancel, _From, State=#state{results=Results}) ->
+	{_, Reply} = adjust(Results),
+	{reply, {ok, Reply}, State};
+handle_call(yield, _From, State=#state{worker_pid=false, results=Results}) ->
 	{_, Reply} = adjust(Results),
 	{stop, normal, {ok, Reply}, State};
 handle_call(yield, From, State) ->
 	{noreply, State#state{yielding=From}};
 handle_call(Request, _From, State) ->
+	io:format("HUH???... ~p~n", [Request]),
 	Reply = {error, {unknown, Request}},
 	{reply, Reply, State}.
 
@@ -103,12 +118,14 @@ handle_info({'DOWN', _, process, Pid, _Reason},
 			State=#state{worker_pid=Pid,
 						 yielding=From,
 						 results=Results}) when From /= false ->
+
 	{_, Reply} = adjust(Results),
 	gen_server:reply(From, {ok, Reply}),
-	{noreply, State#state{worker_running=false}};
+	{noreply, State#state{worker_pid=false}};
 handle_info({'DOWN', _, process, Pid, _Reason}, State=#state{worker_pid=Pid}) ->
-	{noreply, State#state{worker_running=false}};
+	{noreply, State#state{worker_pid=false}};
 handle_info(_Info, State) ->
+	io:format("@@@ ~p~n", [_Info]),
 	{noreply, State}.
 
 terminate(_Reason, _State) ->

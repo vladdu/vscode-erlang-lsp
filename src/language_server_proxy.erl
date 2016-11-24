@@ -67,14 +67,14 @@ dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   result := Result
 				  }) ->
-	io:format("### RESULT ~p: ~tp~n", [Id, Result]),
+	io:format(">>> RESULT ~p: ~tp~n", [Id, Result]),
 	Server ! {'$reply', Id, Result},
 	ok;
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   error := Error
 				  }) ->
-	io:format("### RESULT ~p: ~tp~n", [Id, Error]),
+	io:format(">>> RESULT ~p: ~tp~n", [Id, Error]),
 	Server ! {'$reply', Id, Error},
 	ok;
 dispatch(Server, #{jsonrpc := <<"2.0">>,
@@ -83,27 +83,27 @@ dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   params := Params
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### REQUEST ~p: ~tp ~tp~n", [Id, Method, Params]),
+	io:format("<<< REQUEST ~p: ~tp ~tp~n", [Id, Method, Params]),
 	Server ! {Method, Id, Params};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   id := Id,
 				   method := Method0
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### REQUEST ~p: ~tp~n", [Id, Method]),
+	io:format("<<< REQUEST ~p: ~tp~n", [Id, Method]),
 	Server ! {Method, Id, none};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   method := Method0,
 				   params := Params
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### NOTIFICATION ~tp ~tp~n", [Method, Params]),
+	io:format("<<< NOTIFICATION ~tp ~tp~n", [Method, Params]),
 	Server ! {Method, Params};
 dispatch(Server, #{jsonrpc := <<"2.0">>,
 				   method := Method0
 				  }) ->
 	Method = binary_to_atom(Method0, unicode),
-	io:format("### NOTIFICATION ~tp~n", [Method]),
+	io:format("<<< NOTIFICATION ~tp~n", [Method]),
 	Server ! {Method, none}.
 
 send(Socket, Json0) ->
@@ -114,7 +114,7 @@ send(Socket, Json0) ->
 	gen_tcp:send(Socket, Json).
 
 notify(Socket, Method, Params) ->
-	io:format("NOTIFY ~tp ~tp~n", [Method, Params]),
+	io:format(">>> NOTIFY ~tp ~tp~n", [Method, Params]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			method => Method,
 			params => Params
@@ -123,7 +123,7 @@ notify(Socket, Method, Params) ->
 	send(Socket, Json).
 
 request(Socket, Id, Method, Params) ->
-	io:format("REQUEST ~p: ~tp ~tp~n", [Id, Method, Params]),
+	io:format(">>> REQUEST ~p: ~tp ~tp~n", [Id, Method, Params]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			method => Method,
@@ -132,8 +132,8 @@ request(Socket, Id, Method, Params) ->
 	Json = jsx:encode(Ans),
 	send(Socket, Json).
 
-reply(Socket, Id, Msg) when is_map(Msg); is_list(Msg) ->
-	io:format("REPLY ~p: ~tp~n", [Id, Msg]),
+reply(Socket, Id, Msg) when is_map(Msg); is_list(Msg); Msg==null ->
+	io:format(">>> REPLY ~p: ~tp~n", [Id, Msg]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			result => Msg
@@ -142,7 +142,7 @@ reply(Socket, Id, Msg) when is_map(Msg); is_list(Msg) ->
 	send(Socket, Json);
 reply(Socket, Id, {error, Code0, Msg})  ->
 	Code = error_code(Code0),
-	io:format("ERROR ~p: ~tp~n", [Id, Msg]),
+	io:format(">>> ERROR ~p: ~tp~n", [Id, Msg]),
 	Ans = #{jsonrpc => <<"2.0">>,
 			id => Id,
 			error => #{
@@ -153,7 +153,7 @@ reply(Socket, Id, {error, Code0, Msg})  ->
 	Json = jsx:encode(Ans),
 	send(Socket, Json);
 reply(Socket, Id, Msg) ->
-	io:format("Erroneous message ~tp~n",[{Socket, Id, Msg}]),
+	io:format("Erroneous message ~tp~n",[{Socket, Id, Msg, erlang:get_stacktrace()}]),
 	ok.
 
 decode(Json) when is_map(Json) ->

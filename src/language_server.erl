@@ -60,6 +60,7 @@ publish_diagnostics(URI, Diagnostics) ->
 %%%%%%%%%%%%%%%%%%%%%
 
 init(State) ->
+	process_flag(trap_exit, true),
 	receive
 		{'initialize', Id, ClientCapabilities} ->
 			{ServerCapabilities, NewState} = erlang_language_server:initialize(State#state.internal_state, ClientCapabilities),
@@ -73,7 +74,7 @@ loop(#state{stopped = true}) ->
 		{'exit', _} ->
 			erlang:halt()
 	end;
-loop(State = #state{proxy = Proxy}) ->
+loop(State = #state{proxy = Proxy, pending_reads=Reqs}) ->
 	receive
 		{'shutdown', _Id, _} ->
 			loop(State#state{stopped = true});
@@ -83,6 +84,7 @@ loop(State = #state{proxy = Proxy}) ->
 		{'$/cancelRequest', #{id := Id}} ->
 			NewState = cancel_read(Id, State),
 			loop(NewState);
+
 		{'workspace/didChangeConfiguration', #{settings := Settings}} ->
 			TmpState = cancel_all_pending_reads(State),
 			NewState = erlang_language_server:updated_configuration(TmpState#state.internal_state, Settings),
@@ -109,74 +111,69 @@ loop(State = #state{proxy = Proxy}) ->
 			loop(TmpState#state{internal_state=NewState});
 
 		{'workspace/symbol', Id, #{query:=Query}} ->
-			Result = case start_worker(Id, workspace_symbol, Query, State) of
-						 nil ->
-							 [];
-						 R ->
-							 R
-					 end,
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, workspace_symbol, Query, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/completion', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			Result = start_worker(Id, completion, {URI, Position}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, completion, {URI, Position}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'completionItem/resolve', Id, CompletionItem} ->
-			Result = start_worker(Id, completion_resolve, CompletionItem, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, completion_resolve, CompletionItem, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/hover', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			Result = start_worker(Id, hover, {URI, Position}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, hover, {URI, Position}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/references', Id, #{textDocument:=#{uri:=URI}, position:=Position, context:=Context}} ->
-			Result = start_worker(Id, references, {URI, Position, Context}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, references, {URI, Position, Context}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/documentHighlight', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			Result = start_worker(Id, document_highlight, {URI, Position}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, document_highlight, {URI, Position}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/documentSymbol', Id, #{textDocument:=#{uri:=URI}}} ->
-			Result = start_worker(Id, document_symbol, URI, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, document_symbol, URI, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/formatting', Id,  #{textDocument:=#{uri:=URI}, options:=Options}} ->
-			Result = start_worker(Id, formatting, {URI, Options}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, formatting, {URI, Options}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/rangeFormatting', Id, #{textDocument:=#{uri:=URI}, range:=Range, options:=Options}} ->
-			Result = start_worker(Id, range_formatting, {URI, Range, Options}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, range_formatting, {URI, Range, Options}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/onTypeFormatting', Id, #{textDocument:=#{uri:=URI}, position:=Position, ch:=Ch, options:=Options}} ->
-			Result = start_worker(Id, on_type_formatting, {URI, Position, Ch, Options}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, on_type_formatting, {URI, Position, Ch, Options}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/definition', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			Result = start_worker(Id, definition, {URI, Position}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, definition, {URI, Position}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/signatureHelp', Id, #{textDocument:=#{uri:=URI}, position:=Position}} ->
-			Result = start_worker(Id, signature_help, {URI, Position}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, signature_help, {URI, Position}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/codeAction', Id, #{textDocument:=#{uri:=URI}, range:=Range, context:=Context}} ->
-			Result = start_worker(Id, code_action, {URI, Range, Context}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, code_action, {URI, Range, Context}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/codeLens', Id, #{textDocument:=#{uri:=URI}}} ->
-			Result = start_worker(Id, code_lens, URI, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, code_lens, URI, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'codeLens/resolve', Id, Item} ->
-			Result = start_worker(Id, code_lens_resolve, Item, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, code_lens_resolve, Item, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 		{'textDocument/rename', Id, #{textDocument:=#{uri:=URI}, position:=Position, newName:=NewName}} ->
-			Result = start_worker(Id, rename, {URI, Position, NewName}, State),
-			reply(Proxy, Id, Result),
-			loop(State);
+			Pid = start_worker(Id, rename, {URI, Position, NewName}, State),
+			NewReqs = [{Id, Pid}|Reqs],
+			loop(State#state{pending_reads=NewReqs});
 
 		{show_message, Type, Msg} ->
 			Proxy ! {notify, 'window/showMessage',
@@ -236,18 +233,15 @@ loop(State = #state{proxy = Proxy}) ->
 reply(Proxy, Id, Answer) ->
 	Proxy ! {reply, Id, Answer}.
 
+reply(Proxy, Id, undefined, DefaultAnswer) ->
+	reply(Proxy, Id, DefaultAnswer);
+reply(Proxy, Id, Answer, _DefaultAnswer) ->
+	Proxy ! {reply, Id, Answer}.
 
 cancel_read(Id, #state{pending_reads=Reqs}=State) ->
 	case lists:keytake(Id, 1, Reqs) of
 		{value, {Id, Pid}, NewReqs} ->
 			Pid ! cancel,
-			Answer = receive
-						 X ->
-							 X
-					 after 5000 ->
-						 {error, internal_error, <<"operation timeout">>}
-					 end,
-			reply(State#state.proxy, Id, Answer),
 			State#state{pending_reads=NewReqs};
 		false ->
 			State
@@ -263,7 +257,22 @@ start_worker(Id, Method, Params, State) ->
 								Internal = State#state.internal_state,
 								erlang_language_server:Method(Internal, Params, Reporter)
 						end,
-				  {ok, Key} = cancellable_worker:start(Fun),
-				  {ok, Result} = cancellable_worker:yield(Key),
-				  reply(State#state.proxy, Id, Result)
+				  {ok, MonPid} = cancellable_worker:start(Fun),
+				  DfltAnswer = erlang_language_server:default_answer(Method),
+				  my_worker_loop(Id, State, MonPid, DfltAnswer)
 		  end).
+
+my_worker_loop(Id, State, MonPid, DfltAnswer) ->
+	receive
+		cancel ->
+			{_, Result} = cancellable_worker:cancel(MonPid),
+			reply(State#state.proxy, Id, Result, DfltAnswer)
+	after 10 ->
+		case cancellable_worker:check(MonPid) of
+			{partial, _} ->
+				my_worker_loop(Id, State, MonPid, DfltAnswer);
+			{final, Result} ->
+				reply(State#state.proxy, Id, Result)
+		end
+	end.
+
