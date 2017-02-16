@@ -4,3 +4,4 @@ server
 *.vsix
 erl_crash.dump
 _build
+_checkouts/

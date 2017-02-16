@@ -12,6 +12,8 @@ import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, T
 
 export function activate(context: vscode.ExtensionContext) {
 
+console.log('hello, there');
+    // we want v19+
     let erlExecutablePath = findErlangExecutable('erl');
 
     let clientOptions: LanguageClientOptions = {
@@ -35,20 +37,21 @@ export function activate(context: vscode.ExtensionContext) {
     function createServer(): Promise<StreamInfo> {
         return new Promise((resolve, reject) => {
             let ebin = path.resolve(context.extensionPath, "out", "ebin");
-            let port = 4900;
+            let port = 4902;
             let args = [
                 '-noshell', '+pc', 'unicode',
                 '-s', 'language_server', 'start', port.toString()
             ];
 
             Net.createServer(socket => {
-                resolve({reader: socket, writer: socket});
+                resolve({ reader: socket, writer: socket });
             }).listen(port, () => {
+                let myCwd = context.extensionPath
                 console.log('>> erl:: ' + erlExecutablePath + ' ' + args.join(' '));
-                let options = { 
+                let options = {
                     stdio: 'inherit',
-                    env: {"ERL_LIBS": "_build/default/lib"}, 
-                    cwd: vscode.workspace.rootPath
+                    env: { "ERL_LIBS": "_build/default/lib" + path.delimiter + "_checkouts" },
+                    cwd: myCwd
                 };
                 // Start the child java process
                 let erl = ChildProcess.execFile(erlExecutablePath, args, options);
@@ -62,8 +65,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Create the language client and start it.
     let client = new LanguageClient('Erlang Server', createServer, clientOptions);
     client.onReady().then(
-            () => console.log('Server ready!'),
-            (reason) => vscode.window.showErrorMessage("Could not start Erlang language service: " + reason));
+        () => console.log('Server ready!'),
+        (reason) => vscode.window.showErrorMessage("Could not start Erlang language service: " + reason));
     let aclient = client.start();
 
     // Push the client to the context's subscriptions so that the 
