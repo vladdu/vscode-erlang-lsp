@@ -215,8 +215,9 @@ loop(State = #state{proxy = Proxy, pending_reads=Reqs}) ->
 					loop(State#state{pending_requests=Rest})
 			end;
 
-		{_F, _A} ->
+		{_F, _A})=Other ->
 			%% unknown notification, ignore
+			io:format("Unrecognized notification  ~p~n", [Other]),
 			loop(State);
 		{F, Id, A} ->
 			FN = atom_to_binary(F, latin1),
