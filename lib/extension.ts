@@ -4,7 +4,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as FS from 'fs';
-//import * as PortFinder from 'portfinder';
+import * as PortFinder from 'portfinder';
 import * as Net from 'net';
 import * as ChildProcess from 'child_process';
 
@@ -37,26 +37,27 @@ console.log('hello, there');
     function createServer(): Promise<StreamInfo> {
         return new Promise((resolve, reject) => {
             let ebin = path.resolve(context.extensionPath, "out", "ebin");
-            let port = 4902;
-            let args = [
-                '-noshell', '+pc', 'unicode',
-                '-s', 'language_server', 'start', port.toString()
-            ];
+            PortFinder.getPort({port: 9000}, function(err, port) {
+                let args = [
+                    '-noshell', '+pc', 'unicode',
+                    '-s', 'language_server', 'start', port.toString()
+                ];
 
-            Net.createServer(socket => {
-                resolve({ reader: socket, writer: socket });
-            }).listen(port, () => {
-                let myCwd = context.extensionPath
-                console.log('>> erl:: ' + erlExecutablePath + ' ' + args.join(' '));
-                let options = {
-                    stdio: 'inherit',
-                    env: { "ERL_LIBS": "_build/default/lib" + path.delimiter + "_checkouts" },
-                    cwd: myCwd
-                };
-                // Start the child java process
-                let erl = ChildProcess.execFile(erlExecutablePath, args, options);
-                erl.stdout.on('data', (data) => {
-                    console.log("$> " + data);
+                Net.createServer(socket => {
+                    resolve({ reader: socket, writer: socket });
+                }).listen(port, () => {
+                    let myCwd = context.extensionPath
+                    console.log('>> erl:: ' + erlExecutablePath + ' ' + args.join(' '));
+                    let options = {
+                        stdio: 'inherit',
+                        env: { "ERL_LIBS": "_build/default/lib" + path.delimiter + "_checkouts" },
+                        cwd: myCwd
+                    };
+                    // Start the child java process
+                    let erl = ChildProcess.execFile(erlExecutablePath, args, options);
+                    erl.stdout.on('data', (data) => {
+                        console.log("$> " + data);
+                    });
                 });
             });
         });
