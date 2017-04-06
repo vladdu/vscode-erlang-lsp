@@ -4,7 +4,7 @@
   "description": "Erlang language server",
   "icon": "icon.png",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "vladdu",
   "repository": {
     "type": "git",
@@ -15,7 +15,8 @@
   },
   "categories": [
     "Languages",
-    "Linters"
+    "Linters",
+    "Extension Packs"
   ],
   "keywords": [
     "erlang"
@@ -83,7 +84,10 @@
     "vscode-languageclient": "^2.2.1",
     "socket-retry-connect": "^0.0.1"
   },
-  "devDependencies": {
+  "extensionDependencies": [
+    "pgourlain.erlang"
+  ],
+    "devDependencies": {
     "typescript": "^2.0.3",
     "vscode": "^1.0.0",
     "mocha": "^2.4.5",
