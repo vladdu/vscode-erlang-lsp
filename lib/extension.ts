@@ -13,8 +13,11 @@ import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, T
 export function activate(context: vscode.ExtensionContext) {
 
     // we want v19+
-    let erlExecutablePath = findErlangExecutable('/home/vlad/erlide_tools/19.3/bin/escript');
-
+    let erlExecutablePath = findErlangExecutable('escript');
+    if (!erlExecutablePath) {
+        vscode.window.showWarningMessage('Could not find erlang executable please configure "erlang.erlangPath"');
+        return;
+    }
     let clientOptions: LanguageClientOptions = {
         // Register the server for erlang documents
         documentSelector: ['erlang'],
@@ -86,6 +89,11 @@ export function deactivate() {
 function findErlangExecutable(binname: string) {
     binname = correctBinname(binname);
 
+    let conf = vscode.workspace.getConfiguration('erlang')['erlangPath'];
+    let binpath = path.join(conf, binname);
+    if (FS.existsSync(binpath)) {
+        return binpath;
+    }
     // Then search PATH parts
     if (process.env['PATH']) {
         let pathparts = process.env['PATH'].split(path.delimiter);
@@ -97,8 +105,7 @@ function findErlangExecutable(binname: string) {
         }
     }
 
-    // Else return the binary name directly (this will likely always fail downstream) 
-    return binname;
+    return null;
 }
 
 function correctBinname(binname: string) {
