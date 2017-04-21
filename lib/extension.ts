@@ -12,9 +12,8 @@ import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, T
 
 export function activate(context: vscode.ExtensionContext) {
 
-console.log('hello, there');
     // we want v19+
-    let erlExecutablePath = findErlangExecutable('erl');
+    let erlExecutablePath = findErlangExecutable('/home/vlad/erlide_tools/19.3/bin/escript');
 
     let clientOptions: LanguageClientOptions = {
         // Register the server for erlang documents
@@ -36,29 +35,34 @@ console.log('hello, there');
 
     function createServer(): Promise<StreamInfo> {
         return new Promise((resolve, reject) => {
-            let ebin = path.resolve(context.extensionPath, "out", "ebin");
-            PortFinder.getPort({port: 9000}, function(err, port) {
+            let myCwd = context.extensionPath
+
+            let port = 14902;
+            PortFinder.getPort(function (err, port) {
                 let args = [
-                    '-noshell', '+pc', 'unicode',
-                    '-s', 'language_server', 'start', port.toString()
+                    'erlide_server', '-p', port.toString()
                 ];
 
-                Net.createServer(socket => {
-                    resolve({ reader: socket, writer: socket });
-                }).listen(port, () => {
-                    let myCwd = context.extensionPath
-                    console.log('>> erl:: ' + erlExecutablePath + ' ' + args.join(' '));
-                    let options = {
-                        stdio: 'inherit',
-                        env: { "ERL_LIBS": "_build/default/lib" + path.delimiter + "_checkouts" },
-                        cwd: myCwd
-                    };
-                    // Start the child java process
-                    let erl = ChildProcess.execFile(erlExecutablePath, args, options);
-                    erl.stdout.on('data', (data) => {
-                        console.log("$> " + data);
-                    });
+                console.log('>> erl_lsp:: ' +myCwd + ":: " + erlExecutablePath + ' @ ' + args.join(' '));
+                let options = {
+                    stdio: 'inherit',
+                    env: { "HOME": "/home/vlad" },
+                    cwd: myCwd
+                };
+                // Start the child process
+                let erl = ChildProcess.execFile(erlExecutablePath, args, options, (error, stdout, stderr) => {
+                    if (error) {
+                        throw error;
+                    }
                 });
+                erl.stdout.on('data', (data) => {
+                    console.log("$> " + data);
+                });
+                var waitForSocket = require('socket-retry-connect').waitForSocket;
+                waitForSocket({ port: port }, function(err, socket) {
+                    resolve({ reader: socket, writer: socket });
+                });
+ 
             });
         });
     }
@@ -103,3 +107,4 @@ function correctBinname(binname: string) {
     else
         return binname;
 }
+

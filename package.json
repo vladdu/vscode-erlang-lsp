@@ -80,7 +80,8 @@
   },
   "dependencies": {
     "portfinder": "^1.0.9",
-    "vscode-languageclient": "^2.2.1"
+    "vscode-languageclient": "^2.2.1",
+    "socket-retry-connect": "^0.0.1"
   },
   "devDependencies": {
     "typescript": "^2.0.3",
