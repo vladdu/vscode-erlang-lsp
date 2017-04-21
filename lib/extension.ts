@@ -40,13 +40,12 @@ export function activate(context: vscode.ExtensionContext) {
         return new Promise((resolve, reject) => {
             let myCwd = context.extensionPath
 
-            let port = 14902;
-            PortFinder.getPort(function (err, port) {
+            PortFinder.getPort({ port: 9000 }, function (err, port) {
                 let args = [
-                    'erlide_server', '-p', port.toString()
+                    'erlide_server', port.toString()
                 ];
 
-                console.log('>> erl_lsp:: ' +myCwd + ":: " + erlExecutablePath + ' @ ' + args.join(' '));
+                console.log('>> erl_lsp:: ' + myCwd + ":: " + erlExecutablePath + ' @ ' + args.join(' '));
                 let options = {
                     stdio: 'inherit',
                     env: { "HOME": "/home/vlad" },
@@ -59,13 +58,13 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 });
                 erl.stdout.on('data', (data) => {
-                    console.log("$> " + data);
+                    console.log("$> " + data.toString().trim());
                 });
                 var waitForSocket = require('socket-retry-connect').waitForSocket;
-                waitForSocket({ port: port }, function(err, socket) {
+                waitForSocket({ port: port }, function (err, socket) {
                     resolve({ reader: socket, writer: socket });
                 });
- 
+
             });
         });
     }
@@ -77,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
         (reason) => vscode.window.showErrorMessage("Could not start Erlang language service: " + reason));
     let aclient = client.start();
 
-    // Push the client to the context's subscriptions so that the 
+    // Push the client to the context's subscriptions so that the
     // client can be deactivated on extension deactivation
     context.subscriptions.push(aclient);
 }

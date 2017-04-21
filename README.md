@@ -1,8 +1,8 @@
 # vscode-erlang-lsp README
 
-This repository provides both an Erlang language server and a VSCode extension talking with that server. 
+This repository provides both an Erlang language server and a VSCode extension talking with that server.
 
-To begin with, this is meant to be a testbed for the server and there will be few (if any) other features (like syntax highlighting or executing code). 
+To begin with, this is meant to be a testbed for the server and there will be few (if any) other features (like syntax highlighting or executing code).
 There are other extension that provide those. I think that it will be possible to use these other extensions at the same time.
 
 Later, the server will probably get its own home and more clients will be developed (erlide, the Eclipse IDE, will use it).
@@ -19,17 +19,11 @@ Later, the server will probably get its own home and more clients will be develo
 
 ## Requirements
 
-An Erlang VM 18+ must be installed and accessible on $PATH for the server to run. 
+An Erlang VM 19+ must be installed and accessible on $PATH or at `erlang.erlangPath` for the server to run.
 
 ## Build
 
-### Server
-
-Use `rebar3 compile`.
-
-### Extension
-
-Build as usual, after having built the server. The beam files will be included.
+Build as usual, after updating the server (erlide_ide).
 
 For development, run `vsce package` and install from the resulting `.vsix` file.
 
