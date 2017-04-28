@@ -40,6 +40,12 @@
           "default": "",
           "description": "Directory location of erl/escript.",
           "title": "Path of erlang binaries"
+        },
+        "erlang.server.debug": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Print debug traces from server.",
+          "title": "Activate debug printouts from server"
         }
       }
     },
