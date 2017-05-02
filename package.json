@@ -35,7 +35,7 @@
           "default": 100,
           "description": "Controls the maximum number of problems produced by the server."
         },
-        "erlang.erlangPath": {
+        "erlang.runtime.location": {
           "type": "string",
           "default": "",
           "description": "Directory location of erl/escript.",
