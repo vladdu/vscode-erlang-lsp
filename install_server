@@ -1,0 +1,4 @@
+#! /bin/bash
+
+cp ../erlide_kernel/server/_build/default/bin/erlide_server .
+
