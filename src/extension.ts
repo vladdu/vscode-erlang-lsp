@@ -35,6 +35,10 @@ export function activate(context: vscode.ExtensionContext) {
             ]
         }
     }
+ 
+    let erlideChannel = vscode.window.createOutputChannel('Erlang LSP')
+    context.subscriptions.push(erlideChannel)
+    erlideChannel.clear()
 
     function createServer(): Promise<StreamInfo> {
         return new Promise((resolve, reject) => {
@@ -42,23 +46,23 @@ export function activate(context: vscode.ExtensionContext) {
 
             PortFinder.getPort({ port: 9000 }, function (err, port) {
                 let args = [
-                    'erlide_server', port.toString()
+                    path.join(myCwd, 'erlide_server'), '-p', port.toString()
                 ];
 
-                console.log('>> erl_lsp:: ' + myCwd + ":: " + erlExecutablePath + ' @ ' + args.join(' '));
+                console.log(":: " + erlExecutablePath + ' ' + args.join(' '));
                 let options = {
                     stdio: 'inherit',
-                    env: { "HOME": "/home/vlad" },
+                    env: { "HOME": process.env.HOME },
                     cwd: myCwd
                 };
                 // Start the child process
                 let erl = ChildProcess.execFile(erlExecutablePath, args, options, (error, stdout, stderr) => {
-                    if (error) {
+                    if (error) { 
                         throw error;
                     }
                 });
                 erl.stdout.on('data', (data) => {
-                    console.log("$> " + data.toString().trim());
+                    erlideChannel.appendLine(data.toString().trim());
                 });
                 var waitForSocket = require('socket-retry-connect').waitForSocket;
                 waitForSocket({ port: port }, function (err, socket) {

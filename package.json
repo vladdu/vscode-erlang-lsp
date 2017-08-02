@@ -24,7 +24,7 @@
   "activationEvents": [
     "onLanguage:erlang"
   ],
-  "main": "./out/lib/extension",
+  "main": "./out/src/extension",
   "contributes": {
     "configuration": {
       "type": "object",
