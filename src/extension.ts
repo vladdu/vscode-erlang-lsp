@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
             ]
         }
     }
- 
+
     let erlideChannel = vscode.window.createOutputChannel('Erlang LSP')
     context.subscriptions.push(erlideChannel)
     erlideChannel.clear()
@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
                 };
                 // Start the child process
                 let erl = ChildProcess.execFile(erlExecutablePath, args, options, (error, stdout, stderr) => {
-                    if (error) { 
+                    if (error) {
                         throw error;
                     }
                 });
@@ -92,7 +92,7 @@ export function deactivate() {
 function findErlangExecutable(binname: string) {
     binname = correctBinname(binname);
 
-    let conf = vscode.workspace.getConfiguration('erlang')['erlangPath'];
+    let conf = vscode.workspace.getConfiguration('erlang')['runtime.location'];
     let binpath = path.join(conf, binname);
     if (FS.existsSync(binpath)) {
         return binpath;
