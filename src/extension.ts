@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
     // we want v19+
     let erlExecutablePath = findErlangExecutable('escript');
     if (!erlExecutablePath) {
-        vscode.window.showWarningMessage('Could not find erlang executable please configure "erlang.erlangPath"');
+        vscode.window.showWarningMessage('Could not find Erlang v20 executable; please configure "erlang.runtime.location" or $PATH');
         return;
     }
     let clientOptions: LanguageClientOptions = {
@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Push the client to the context's subscriptions so that the
     // client can be deactivated on extension deactivation
-    context.subscriptions.push(aclient);
+    context.subscriptions.push(aclient)
 }
 
 // this method is called when your extension is deactivated
@@ -98,7 +98,7 @@ function findErlangExecutable(binname: string) {
     if(conf) {
         let binpath = path.join(conf, 'bin', binname);
         if (FS.existsSync(binpath)) {
-            return binpath;
+            return binpath
         }
     }
     // Then search PATH parts
@@ -107,12 +107,24 @@ function findErlangExecutable(binname: string) {
         for (let i = 0; i < pathparts.length; i++) {
             let binpath = path.join(pathparts[i], binname);
             if (FS.existsSync(binpath)) {
-                return binpath;
+                if(check_version('20', pathparts[i]))
+                    return binpath
             }
         }
     }
 
     return null;
+}
+
+function check_version(vsn, fpath) {
+    let fname = path.join(fpath, 'start.script')
+    if(FS.existsSync(fname)) {
+        let v = FS.readFileSync(fname, 'utf-8')
+        let x = v.match("{\"Erlang/OTP\", *\""+vsn+"\"}")
+        return x.length!=0
+    }
+    // what to do here?
+    return true
 }
 
 function correctBinname(binname: string) {
