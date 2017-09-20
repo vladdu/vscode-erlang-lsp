@@ -95,9 +95,11 @@ function findErlangExecutable(binname: string) {
     binname = correctBinname(binname);
 
     let conf = vscode.workspace.getConfiguration('erlang')['runtime.location'];
-    let binpath = path.join(conf, 'bin', binname);
-    if (FS.existsSync(binpath)) {
-        return binpath;
+    if(conf) {
+        let binpath = path.join(conf, 'bin', binname);
+        if (FS.existsSync(binpath)) {
+            return binpath;
+        }
     }
     // Then search PATH parts
     if (process.env['PATH']) {
