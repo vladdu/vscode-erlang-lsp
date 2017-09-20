@@ -1,4 +1,5 @@
 #! /bin/bash
 
-cp ../erlide_kernel/server/_build/default/bin/erlide_server .
+pushd ../sourcer && ./rebar3 do clean,escriptize && popd
+cp ../sourcer/_build/default/bin/erlang_ls .
 

@@ -46,18 +46,20 @@ export function activate(context: vscode.ExtensionContext) {
 
             PortFinder.getPort({ port: 9000 }, function (err, port) {
                 let args = [
-                    path.join(myCwd, 'erlide_server'), '-p', port.toString()
+                    path.join(myCwd, 'erlang_ls'), '-p', port.toString()
                 ];
 
                 console.log(":: " + erlExecutablePath + ' ' + args.join(' '));
                 let options = {
                     stdio: 'inherit',
                     env: { "HOME": process.env.HOME },
-                    cwd: myCwd
+                    cwd: myCwd,
+                    maxBuffer: 1024 * 1024
                 };
                 // Start the child process
                 let erl = ChildProcess.execFile(erlExecutablePath, args, options, (error, stdout, stderr) => {
                     if (error) {
+                        console.log("ERROR::: " + error)
                         throw error;
                     }
                 });
@@ -93,7 +95,7 @@ function findErlangExecutable(binname: string) {
     binname = correctBinname(binname);
 
     let conf = vscode.workspace.getConfiguration('erlang')['runtime.location'];
-    let binpath = path.join(conf, binname);
+    let binpath = path.join(conf, 'bin', binname);
     if (FS.existsSync(binpath)) {
         return binpath;
     }
