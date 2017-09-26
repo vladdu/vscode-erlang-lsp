@@ -49,12 +49,12 @@ export function activate(context: vscode.ExtensionContext) {
                     path.join(myCwd, 'erlang_ls'), '-p', port.toString()
                 ];
 
-                console.log(":: " + erlExecutablePath + ' ' + args.join(' '));
+                console.log("Launching:: " + erlExecutablePath + ' ' + args.join(' '));
                 let options = {
                     stdio: 'inherit',
                     env: { "HOME": process.env.HOME },
                     cwd: myCwd,
-                    maxBuffer: 1024 * 1024
+                    maxBuffer: 2 * 1024 * 1024
                 };
                 // Start the child process
                 let erl = ChildProcess.execFile(erlExecutablePath, args, options, (error, stdout, stderr) => {
@@ -66,12 +66,15 @@ export function activate(context: vscode.ExtensionContext) {
                 erl.stdout.on('data', (data) => {
                     erlideChannel.appendLine(data.toString().trim());
                 });
+                erl.stderr.on('data', (data) => {
+                    erlideChannel.appendLine("ERR:"+data.toString().trim());
+                });
                 var waitForSocket = require('socket-retry-connect').waitForSocket;
                 waitForSocket({ port: port }, function (err, socket) {
                     resolve({ reader: socket, writer: socket });
                 });
 
-            });
+            }); 
         });
     }
 
@@ -94,7 +97,8 @@ export function deactivate() {
 function findErlangExecutable(binname: string) {
     binname = correctBinname(binname);
 
-    let conf = vscode.workspace.getConfiguration('erlang')['runtime.location'];
+    let v = vscode.workspace.getConfiguration('erlang')
+    let conf = v.get('runtime.location', '')
     if(conf) {
         let binpath = path.join(conf, 'bin', binname);
         if (FS.existsSync(binpath)) {
@@ -107,8 +111,9 @@ function findErlangExecutable(binname: string) {
         for (let i = 0; i < pathparts.length; i++) {
             let binpath = path.join(pathparts[i], binname);
             if (FS.existsSync(binpath)) {
-                if(check_version('20', pathparts[i]))
+                if(check_version('20', pathparts[i])) {
                     return binpath
+                }
             }
         }
     }
