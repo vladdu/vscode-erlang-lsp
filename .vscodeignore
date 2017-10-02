@@ -10,3 +10,4 @@ vsc-extension-quickstart.md
 **/*.vsix
 erl_crash.dump
 .settings/**
+tmp/**
