@@ -75,12 +75,12 @@ async function getEscriptPath() {
         info = await erts.getRuntimeInfo()
         let { location: location, ertsVersion: version } = info
         if(!location){
-            th
+            throw Error('foobar')
         }
         let escriptPath = path.join(location, 'bin', 'escript')
         return escriptPath
     } catch (error) {
-        throw Error('Could\'nt find Erlang v20+ executable, please configure "erlang.runtime.location" or $PATH: ' + error.message)
+        throw Error('Couldn\'t find Erlang v20+ executable, please configure "erlang.runtime.location" or $PATH: ' + error.message)
     }
 }
 

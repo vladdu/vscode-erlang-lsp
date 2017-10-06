@@ -12,11 +12,17 @@ import * as vscode from 'vscode';
 import * as myExtension from '../src/extension';
 
 // Defines a Mocha test suite to group tests of similar kind together
-suite("Extension Tests", () => {
+suite('Erlang Language Extension', () => {
+    
+        test('Extension should be present', () => {
+            assert.ok(vscode.extensions.getExtension('vladdu.erlang'));
+        });
+    
+        test('should activate', function () {
+            this.timeout(1 * 60 * 1000);
+            return vscode.extensions.getExtension('vladdu.erlang').activate().then((api) => {
+                assert.ok(true);
+            });
+        });
 
-    // Defines a Mocha unit test
-    test("Something 1", () => {
-        assert.equal(-1, [1, 2, 3].indexOf(5));
-        assert.equal(-1, [1, 2, 3].indexOf(0));
-    });
 });

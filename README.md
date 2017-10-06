@@ -1,4 +1,4 @@
-# vscode-erlang-lsp README
+# erlang README
 
 This repository provides both an Erlang language server and a VSCode extension talking with that server.
 
