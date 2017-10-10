@@ -3,3 +3,4 @@ node_modules
 *.vsix
 erl_crash.dump
 erlang_ls
+.vscode-test
