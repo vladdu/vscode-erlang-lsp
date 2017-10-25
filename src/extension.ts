@@ -28,6 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
                     vscode.commands.executeCommand('vscode.open', downloadUrl)
                 }
             })
+        throw e;
     })
 }
 
@@ -113,57 +114,3 @@ async function startServer(myCwd, escriptPath, channel: vscode.OutputChannel): P
     let socket = await waitForSocket({ port: port })
     return Promise.resolve({ reader: socket, writer: socket })
 }
-
-function findErlangExecutable(binname: string) {
-    binname = correctBinname(binname)
-
-    let v = vscode.workspace.getConfiguration('erlang')
-    let conf = v.get('runtime.location', '')
-    if (conf) {
-        let binpath = path.join(conf, 'bin', binname)
-        if (FS.existsSync(binpath)) {
-            if (check_version('20', conf)) {
-                return binpath
-            }
-        }
-    }
-    // Then search PATH parts
-    if (process.env['PATH']) {
-        let pathparts = process.env['PATH'].split(path.delimiter)
-        for (let i = 0; i < pathparts.length; i++) {
-            let binpath = path.join(pathparts[i], binname)
-            if (FS.existsSync(binpath)) {
-                if (check_version('20', path.join(pathparts[i]))) {
-                    return binpath
-                }
-            }
-        }
-    }
-
-    return null
-}
-
-function check_version(vsn, fpath) {
-    return get_version(fpath) === vsn
-}
-
-function get_version(home) {
-    let fname = path.join(home, 'start.script')
-    if (FS.existsSync(fname)) {
-        let v = FS.readFileSync(fname, 'utf-8')
-        let x = v.match('{"Erlang/OTP", *"([^"]+)"}')
-        if (x.length === 2) {
-            return x[1]
-        }
-    }
-    return null
-}
-
-function correctBinname(binname: string) {
-    if (process.platform === 'win32') {
-        return binname + '.exe'
-    } else {
-        return binname
-    }
-}
-

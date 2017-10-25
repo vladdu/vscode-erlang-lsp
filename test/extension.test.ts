@@ -13,16 +13,15 @@ import * as myExtension from '../src/extension';
 
 // Defines a Mocha test suite to group tests of similar kind together
 suite('Erlang Language Extension', () => {
-    
-        test('Extension should be present', () => {
-            assert.ok(vscode.extensions.getExtension('vladdu.erlang'));
-        });
-    
-        test('should activate', function () {
-            this.timeout(1 * 60 * 1000);
-            return vscode.extensions.getExtension('vladdu.erlang').activate().then((api) => {
-                assert.ok(true);
-            });
-        });
 
+    test('Extension should be present', () => {
+        assert.ok(vscode.extensions.getExtension('vladdu.erlang'));
+    });
+
+    test('should activate', function () {
+        this.timeout(10 * 1000);
+        return vscode.extensions.getExtension('vladdu.erlang').activate().then((api) => {
+            assert.ok(true);
+        });
+    });
 });

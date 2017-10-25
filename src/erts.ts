@@ -22,8 +22,11 @@ export interface RuntimeInfo {
 
 export async function getRuntimeInfo(): Promise<RuntimeInfo> {
     let location = await checkErlangLocation()
-    let version = await checkErlangVersion(location)
-    return { 'location': location, 'ertsVersion': version }
+    if (location !== undefined) {
+        let version = await checkErlangVersion(location)
+        return { 'location': location, 'ertsVersion': version }
+    }
+    return { 'location': undefined, 'ertsVersion': undefined }
 }
 
 async function checkErlangLocation(): Promise<string> {
@@ -46,7 +49,7 @@ function readErlangConfigLocation(): string {
 }
 
 async function checkErlangVersion(erl_home: string): Promise<number> {
-    let cp = await execFile(erl_home + '/bin/erl', ['-version'], { capture: ['stdout', 'stderr'] })
+    let cp = await execFile(path.join(erl_home, 'bin', 'erl'), ['-version'], { capture: ['stdout', 'stderr'] })
     let ver = cp.stderr.match('version ([0-9]+).')
     if (ver.length > 1) {
         let vv = parseInt(ver[1])
@@ -59,7 +62,7 @@ async function checkErlangVersion(erl_home: string): Promise<number> {
 }
 
 function findErlangHome(): string {
-    return which('escript', {nothrow: true})
+    return path.dirname(path.dirname(which.sync('escript', { nothrow: true })))
 }
 
 function getOtpVersion(home) {
