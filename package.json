@@ -38,8 +38,14 @@
         "erlang.runtime.location": {
           "type": "string",
           "default": "",
-          "description": "Directory location of erl/escript.",
-          "title": "Path of erlang binaries"
+          "description": "Location of erl/escript binaries ($ERL_TOP/bin). Empty value means to use $PATH. This value is used to run the language server.",
+          "title": "Path to Erlang 20+ binaries"
+        },
+        "erlang.rebar.useLegacy": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Use legacy rebar instead of rebar3. Needs to be available in $PATH.",
+          "title": "Use legacy rebar instead of rebar3?"
         },
         "erlang.server.debug": {
           "type": "boolean",

@@ -1,6 +1,6 @@
 'use strict'
 
-import { workspace, Uri } from 'vscode'
+import { window, workspace, Uri } from 'vscode'
 import * as child_process from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -32,14 +32,17 @@ export async function getRuntimeInfo(): Promise<RuntimeInfo> {
 async function checkErlangLocation(): Promise<string> {
     let location: string = readErlangConfigLocation()
     if (location) {
-        let msg = 'The vscode setting "erlang.runtime.location"'
         location = expandHomeDir(location)
-        if (!fs.existsSync(path.resolve(location, 'bin', ESCRIPT_FILENAME))) {
-            throw Error(msg + ' does not point to an Erlang installation.')
+        if (fs.existsSync(path.join(location, ESCRIPT_FILENAME))) {
+            return location
+        } else {
+            if (fs.existsSync(path.join(location, 'bin', ESCRIPT_FILENAME))) {
+                return path.join(location, 'bin')
+            } else {
+                window.showInformationMessage('Please review setting erlang.runtime.location: escript binary not found; trying $PATH')
+            }
         }
-        return location
     }
-    //No settings, let's try to detect as last resort.
     return findErlangHome()
 }
 
@@ -49,20 +52,20 @@ function readErlangConfigLocation(): string {
 }
 
 async function checkErlangVersion(erl_home: string): Promise<number> {
-    let cp = await execFile(path.join(erl_home, 'bin', 'erl'), ['-version'], { capture: ['stdout', 'stderr'] })
+    let cp = await execFile(path.join(erl_home, 'erl'), ['-version'], { capture: ['stdout', 'stderr'] })
     let ver = cp.stderr.match('version ([0-9]+).')
     if (ver.length > 1) {
         let vv = parseInt(ver[1])
-        if (vv === 9) {
+        if (vv >= 9) {
             return vv
         } else {
-            throw Error('Erlang v' + (vv + 11) + ' found.')
+            throw Error('Erlang v' + (vv + 11) + ' found (need 20+).')
         }
     }
 }
 
 function findErlangHome(): string {
-    return path.dirname(path.dirname(which.sync('escript', { nothrow: true })))
+    return path.dirname(which.sync('escript', { nothrow: true }))
 }
 
 function getOtpVersion(home) {
