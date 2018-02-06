@@ -1,6 +1,5 @@
 'use strict'
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+
 import * as vscode from 'vscode'
 import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, TransportKind, StreamInfo } from 'vscode-languageclient'
 import * as path from 'path'
@@ -65,6 +64,7 @@ async function createClient(extensionPath, channel: vscode.OutputChannel) {
             return startServer(extensionPath, escriptPath, channel)
         },
         clientOptions)
+    client.registerProposedFeatures();
     client.onReady().then(() => { console.log('Erlang server ready!') },
         (reason) => { throw Error('Erlang server error:  ' + reason) })
     return client.start()
