@@ -61,6 +61,13 @@
         "configuration": "./erlang.configuration.json"
       }
     ],
+    "keybindings":[
+      {
+        "command": "editor.action.formatDocument",
+        "key": "ctrl+shift+f",
+        "when": "editorTextFocus && !editorReadonly && editorLangId == erlang"
+      }
+    ],
     "jsonValidation": [
       {
         "fileMatch": "erlang.config.json",
