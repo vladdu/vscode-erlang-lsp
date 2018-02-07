@@ -1,11 +1,8 @@
 # erlang README
 
-This repository provides both an Erlang language server and a VSCode extension talking with that server.
+This repository provides a VSCode extension that interfaces with the Erlang language server at https://github.com/erlang/sourcer.
 
-To begin with, this is meant to be a testbed for the server and there will be few (if any) other features (like syntax highlighting or executing code).
-There are other extension that provide those. I think that it will be possible to use these other extensions at the same time.
-
-Later, the server will probably get its own home and more clients will be developed (erlide, the Eclipse IDE, will use it).
+To begin with, this is meant to be a testbed for the server and there will be few (if any) other features (like syntax highlighting or executing code). For these, we recommend the `pgourlain.erlang` extension, that seems to have most functionality at this moment.
 
 ## Features
 
@@ -19,13 +16,15 @@ Later, the server will probably get its own home and more clients will be develo
 
 ## Requirements
 
-An Erlang VM 19+ must be installed and accessible on $PATH or at `erlang.erlangPath` for the server to run.
+An Erlang VM 20+ must be installed and accessible on $PATH or at `erlang.erlangPath` for the server to run.
 
 ## Build
 
-Build as usual, after updating the server (erlide_ide).
+The build scripts assume that the `sourcer` repository containing the language server is cloned in a sibling directory of this projects'. 
 
-For development, run `vsce package` and install from the resulting `.vsix` file.
+In order to produce a `.vsix` file that can be installed, execute `vsce package`. This will compile and package the language server, copy it here and archive everything.
+
+For development, use vscode and in a terminal run `npm install`, then `./install_server`, then press F5 to launch a vscode instance that includes the current extension.
 
 ## Extension Settings
 
