@@ -7,7 +7,12 @@
             "es6"
         ],
         "allowJs": true,
-        "sourceMap": true
+        "sourceMap": true,
+        "noImplicitAny": true,
+		"noImplicitThis": true,
+		"alwaysStrict": true,
+		"strictFunctionTypes": true,
+        "strictPropertyInitialization": true
     },
     "exclude": [
         "out",

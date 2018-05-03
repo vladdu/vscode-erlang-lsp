@@ -1,5 +1,3 @@
-'use strict'
-
 import { window, workspace, Uri } from 'vscode'
 import * as child_process from 'child_process'
 import * as fs from 'fs'
@@ -24,6 +22,7 @@ export async function getRuntimeInfo(): Promise<RuntimeInfo> {
     let location = await checkErlangLocation()
     if (location !== undefined) {
         let version = await checkErlangVersion(location)
+        window.setStatusBarMessage('Using Erlang ' + (version+11) + ' from ' + location, 10000)
         return { 'location': location, 'ertsVersion': version }
     }
     return { 'location': undefined, 'ertsVersion': undefined }
@@ -43,7 +42,8 @@ async function checkErlangLocation(): Promise<string> {
             }
         }
     }
-    return findErlangHome()
+    let home = findErlangHome()
+    return home
 }
 
 function readErlangConfigLocation(): string {
@@ -68,7 +68,7 @@ function findErlangHome(): string {
     return path.dirname(which.sync('escript', { nothrow: true }))
 }
 
-function getOtpVersion(home) {
+function getOtpVersion(home: string) {
     let fname = path.join(home, 'start.script')
     if (fs.existsSync(fname)) {
         let v = fs.readFileSync(fname, 'utf-8')

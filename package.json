@@ -22,6 +22,7 @@
     "erlang"
   ],
   "activationEvents": [
+    "onView:erlangOTPlibs",
     "onLanguage:erlang"
   ],
   "main": "./out/src/extension",
@@ -41,6 +42,31 @@
           "description": "Location of erl/escript binaries ($ERL_TOP/bin). Empty value means to use $PATH. This value is used to run the language server.",
           "title": "Path to Erlang 20+ binaries"
         },
+        "erlang.runtime": {
+          "type": "string",
+          "default": "",
+          "description": "Location of Erlang runtime for project.",
+          "title": "Path to Erlang runtime for project"
+        },
+        "erlang.runtimes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "A short name for the runtime (the version number works well)."
+                },
+              "path": {
+                "type": "string",
+                "description": "Path to installation ($ERL_TOP)"
+                }
+              }
+            },
+          "default": [],
+          "description": "Location of known Erlang runtimes. Used by projects to show source of runtime libraries.",
+          "title": "Installed Erlang runtimes"
+        },
         "erlang.rebar.useLegacy": {
           "type": "boolean",
           "default": "false",
@@ -55,12 +81,43 @@
         }
       }
     },
-    "languages": [
-      {
-        "id": "erlang",
-        "configuration": "./erlang.configuration.json"
-      }
-    ],
+		"languages": [
+			{
+				"id": "erlang",
+				"aliases": [
+					"Erlang",
+					"erlang"
+				],
+				"extensions": [
+					".erl",
+					".hrl",
+					".yrl",
+					".escript",
+					".app.src",
+					"rebar.config"
+				],
+				"configuration": "./erlang.configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "erlang",
+				"scopeName": "source.erlang",
+				"path": "./syntaxes/erlang.tmLanguage"
+			}
+		],
+    "commands": [
+			{
+				"command": "erlang.detect.runtimes",
+				"title": "Change runtime",
+				"category": "Erlang"
+			},
+			{
+				"command": "erlang.select.runtime",
+				"title": "Select runtime",
+				"category": "Erlang"
+			}
+		],
     "keybindings":[
       {
         "command": "editor.action.formatDocument",
@@ -68,6 +125,14 @@
         "when": "editorTextFocus && !editorReadonly && editorLangId == erlang"
       }
     ],
+    "views": {
+      "explorer": [
+          {
+              "id": "erlangOTPlibs",
+              "name": "OTP libs"
+          }
+      ]
+    },
     "jsonValidation": [
       {
         "fileMatch": "erlang.config.json",
