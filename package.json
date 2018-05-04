@@ -4,7 +4,7 @@
   "description": "Erlang language server",
   "icon": "icon.png",
   "license": "MIT",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "vladdu",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
     "vscode": "^1.18.0"
   },
   "categories": [
-    "Languages",
+    "Programming Languages",
     "Linters",
     "Extension Packs"
   ],
