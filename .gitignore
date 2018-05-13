@@ -4,3 +4,4 @@ node_modules
 erl_crash.dump
 erlang_ls
 .vscode-test
+publish_erlide

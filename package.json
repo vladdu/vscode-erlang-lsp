@@ -4,7 +4,7 @@
   "description": "Erlang language server",
   "icon": "icon.png",
   "license": "MIT",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "vladdu",
   "repository": {
     "type": "git",
