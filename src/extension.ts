@@ -32,16 +32,16 @@ export function activate(context: vscode.ExtensionContext, isRestart: boolean = 
     })
 
     context.subscriptions.push(vscode.commands.registerCommand('erlang.reloadExtension', (_) => {
-		deactivate(true);
-		for (const sub of context.subscriptions) {
-			try {
-				sub.dispose();
-			} catch (e) {
-				console.error(e);
-			}
-		}
-		activate(context, true);
-	}))
+        deactivate(true);
+        for (const sub of context.subscriptions) {
+            try {
+                sub.dispose();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        activate(context, true);
+    }))
     // context.subscriptions.push(vscode.commands.registerCommand('erlang.detect.runtimes', (_) => {
     //     runtimes.detectRuntimes()
     // }))
@@ -49,8 +49,10 @@ export function activate(context: vscode.ExtensionContext, isRestart: boolean = 
     //     runtimes.selectRuntime()
     // }))
     const rootPath = vscode.workspace.rootPath
-    const otpLibsProvider = new OtpLibsProvider(rootPath)
-    vscode.window.registerTreeDataProvider('erlangOTPlibs', otpLibsProvider);
+    if (rootPath !== undefined) {
+        const otpLibsProvider = new OtpLibsProvider(rootPath)
+        vscode.window.registerTreeDataProvider('erlangOTPlibs', otpLibsProvider);
+    }
 }
 
 export function deactivate(isRestart: boolean = false) {
@@ -139,53 +141,53 @@ async function startServer(myCwd: string, escriptPath: string, channel: vscode.O
 }
 
 export async function showErlangRuntimeError(
-	search: (path: string[]) => string,
+    search: (path: string[]) => string,
     saveSdkPath: (path: string) => Thenable<void>,
     downloadUrl: string,
-	commandToReRun: string = null,
+    commandToReRun: string = '',
 ) {
-	const locateAction = 'Locate runtime';
-	const downloadAction = 'Download runtime';
-	let displayMessage = `Could not find an Erlang runtime. ` +
-		`Please ensure 'erl' is installed and in your PATH (you may need to restart).`;
-	while (true) {
-		const selectedItem = await vscode.window.showErrorMessage(displayMessage,
-			locateAction,
-			downloadAction,
-		);
-		// TODO: Refactor/reformat/comment this code - it's messy and hard to understand!
-		if (selectedItem === locateAction) {
-			const selectedFolders =
-				await vscode.window.showOpenDialog({ canSelectFolders: true, openLabel: `Set Erlang runtime folder` });
-			if (selectedFolders && selectedFolders.length > 0) {
-				const matchingSdkFolder = search(selectedFolders.map((f) => f.fsPath));
-				if (matchingSdkFolder) {
-					await saveSdkPath(matchingSdkFolder);
-					await reloadExtension();
-					if (commandToReRun) {
-						vscode.commands.executeCommand(commandToReRun);
-					}
-					break;
-				} else {
-					displayMessage = `That folder does not appear to be a Erlang runtime.`;
-				}
-			}
-		} else if (selectedItem === downloadAction) {
-			openInBrowser(downloadUrl);
-			break;
-		} else {
-			break;
-		}
-	}
+    const locateAction = 'Locate runtime';
+    const downloadAction = 'Download runtime';
+    let displayMessage = `Could not find an Erlang runtime. ` +
+        `Please ensure 'erl' is installed and in your PATH (you may need to restart).`;
+    while (true) {
+        const selectedItem = await vscode.window.showErrorMessage(displayMessage,
+            locateAction,
+            downloadAction,
+        );
+        // TODO: Refactor/reformat/comment this code - it's messy and hard to understand!
+        if (selectedItem === locateAction) {
+            const selectedFolders =
+                await vscode.window.showOpenDialog({ canSelectFolders: true, openLabel: `Set Erlang runtime folder` });
+            if (selectedFolders && selectedFolders.length > 0) {
+                const matchingSdkFolder = search(selectedFolders.map((f) => f.fsPath));
+                if (matchingSdkFolder) {
+                    await saveSdkPath(matchingSdkFolder);
+                    await reloadExtension();
+                    if (commandToReRun) {
+                        vscode.commands.executeCommand(commandToReRun);
+                    }
+                    break;
+                } else {
+                    displayMessage = `That folder does not appear to be a Erlang runtime.`;
+                }
+            }
+        } else if (selectedItem === downloadAction) {
+            openInBrowser(downloadUrl);
+            break;
+        } else {
+            break;
+        }
+    }
 }
 
 export function openInBrowser(url: string) {
-	vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
+    vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
 }
 
 export async function reloadExtension(prompt?: string, buttonText?: string) {
-	const restartAction = buttonText || 'Restart';
-	if (!prompt || await vscode.window.showInformationMessage(prompt, restartAction) === restartAction) {
-		vscode.commands.executeCommand('erlang.reloadExtension');
-	}
+    const restartAction = buttonText || 'Restart';
+    if (!prompt || await vscode.window.showInformationMessage(prompt, restartAction) === restartAction) {
+        vscode.commands.executeCommand('erlang.reloadExtension');
+    }
 }
