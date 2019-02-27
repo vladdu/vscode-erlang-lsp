@@ -22,10 +22,10 @@ export async function getRuntimeInfo(): Promise<RuntimeInfo> {
     let location = await checkErlangLocation()
     if (location !== undefined) {
         let version = await checkErlangVersion(location)
-        window.setStatusBarMessage('Using Erlang ' + (version+11) + ' from ' + location, 10000)
+        window.setStatusBarMessage('Using Erlang ' + (version + 11) + ' from ' + location, 10000)
         return { 'location': location, 'ertsVersion': version }
     }
-    return { 'location': undefined, 'ertsVersion': undefined }
+    return { 'location': '', 'ertsVersion': 0 }
 }
 
 async function checkErlangLocation(): Promise<string> {
@@ -48,7 +48,7 @@ async function checkErlangLocation(): Promise<string> {
 
 function readErlangConfigLocation(): string {
     const config = workspace.getConfiguration()
-    return config.get<string>('erlang.runtime.location', null)
+    return config.get<string>('erlang.runtime.location', '')
 }
 
 async function checkErlangVersion(erl_home: string): Promise<number> {
@@ -62,10 +62,16 @@ async function checkErlangVersion(erl_home: string): Promise<number> {
             throw Error('Erlang v' + (vv + 11) + ' found (need 20+).')
         }
     }
+    return -1;
 }
 
 function findErlangHome(): string {
-    return path.dirname(which.sync('escript', { nothrow: true }))
+    let dir = which.sync('escript', { nothrow: true })
+    if (dir === null) {
+        return ''
+    } else {
+        return path.dirname(dir)
+    }
 }
 
 function getOtpVersion(home: string) {
@@ -73,7 +79,7 @@ function getOtpVersion(home: string) {
     if (fs.existsSync(fname)) {
         let v = fs.readFileSync(fname, 'utf-8')
         let x = v.match('{"Erlang/OTP", *"([^"]+)"}')
-        if (x.length === 2) {
+        if (x !== null && x.length === 2) {
             return x[1]
         }
     }
