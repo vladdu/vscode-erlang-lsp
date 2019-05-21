@@ -129,12 +129,16 @@ async function startServer(myCwd: string, escriptPath: string, channel: vscode.O
         console.log('Erlang LS exited with ' +
             `code ${code} and signal ${signal}`)
     })
-    erl.stdout.on('data', (data) => {
-        channel.appendLine(data.toString().trim())
-    })
-    erl.stderr.on('data', (data) => {
-        channel.appendLine('<ERR>:' + data.toString().trim())
-    })
+    if(erl.stdout) {
+        erl.stdout.on('data', (data) => {
+            channel.appendLine(data.toString().trim())
+        })
+    }
+    if(erl.stderr) {
+        erl.stderr.on('data', (data) => {
+            channel.appendLine('<ERR>:' + data.toString().trim())
+        })
+    }
     const waitForSocket = denodeify(require('socket-retry-connect').waitForSocket)
     let socket = await waitForSocket({ port: port })
     return Promise.resolve({ reader: socket, writer: socket })
